@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -10,6 +11,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { FileSpreadsheet, Loader2, Copy, Check } from "lucide-react";
 import { CodeBlock, dracula } from "react-code-blocks";
 
@@ -48,7 +55,7 @@ export default function CreateDialogueModal({
 }: CreateDialogueModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    campaignObjective: "",
+    campaignObjective: "increase-order-value",
     productList: "Allproducts.csv",
     additionalPrompt: "",
   });
@@ -65,13 +72,13 @@ export default function CreateDialogueModal({
   const generateCampaignName = (objective: string) => {
     const objectiveMap: { [key: string]: string } = {
       "increase-order-value": "Boost Sales Campaign",
-      "customer-retention": "Loyalty Builder Campaign", 
+      "customer-retention": "Loyalty Builder Campaign",
       "brand-awareness": "Brand Discovery Campaign",
-      "lead-generation": "Lead Capture Campaign"
+      "lead-generation": "Lead Capture Campaign",
     };
-    
+
     const baseName = objectiveMap[objective] || "Personalization Campaign";
-    const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
     return `${baseName} - ${timestamp}`;
   };
 
@@ -114,9 +121,11 @@ export default function CreateDialogueModal({
       } else if (currentStep === 2) {
         // Auto-generate campaign name and move to Step 3
         if (selectedVersions.length > 0) {
-          const generatedName = generateCampaignName(formData.campaignObjective);
+          const generatedName = generateCampaignName(
+            formData.campaignObjective
+          );
           setCampaignName(generatedName);
-          
+
           // Generate iframe code with the auto-generated campaign name
           if (recommendations) {
             setIsGeneratingIframe(true);
@@ -134,7 +143,7 @@ export default function CreateDialogueModal({
 
   const generateIframeCode = async (nameToUse?: string) => {
     const currentCampaignName = nameToUse || campaignName;
-    
+
     try {
       const selectedVariationIds = selectedVersions.map(
         (index) => recommendations!.variations[index].id
@@ -167,8 +176,14 @@ export default function CreateDialogueModal({
       console.error("Error generating iframe code:", error);
       // Clean single-line iframe code like Jebbit
       const campaignId = Math.random().toString(36).substr(2, 9);
-      const campaignSlug = currentCampaignName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-      setIframeCode(`<iframe class="bluecreations-frame" src="https://app.bluecreations.ai/${campaignSlug}?c=${campaignId}&obj=${formData.campaignObjective}&deferred=true" seamless="true" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="width:100%;min-height:600px;" onload="function embedBlueCreations(){function e(){var e='attach'===t?window.addEventListener:window.removeEventListener;e('DOMContentLoaded',i,!1),e('load',i,!1),e('scroll',i,!1),e('resize',i,!1)}var n=document.querySelector('.bluecreations-frame');function i(){(function(){var e=n.getBoundingClientRect(),t=n.clientHeight/2,i=n.clientWidth/2;return e.top>=0&&e.left>=0&&e.top<=(window.innerHeight||document.documentElement.clientHeight)-t&&e.left<=(window.innerWidth||document.documentElement.clientWidth)-i})(n)&&n.contentWindow.postMessage('startBlueCreationsCampaign','*')}window.addEventListener('message',function(){t&&('blueCreationsLoaded'===t.data?e('remove'):'blueCreationsCampaignLoaded'===t.data&&(window.location.href=t.data.options.link))},!1),e('attach')}embedBlueCreations('.bluecreations-frame');"></iframe>`);
+      const campaignSlug = currentCampaignName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+      setIframeCode(
+        `<iframe class="bluecreations-frame" src="https://app.bluecreations.ai/${campaignSlug}?c=${campaignId}&obj=${formData.campaignObjective}&deferred=true" seamless="true" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="width:100%;min-height:600px;" onload="function embedBlueCreations(){function e(){var e='attach'===t?window.addEventListener:window.removeEventListener;e('DOMContentLoaded',i,!1),e('load',i,!1),e('scroll',i,!1),e('resize',i,!1)}var n=document.querySelector('.bluecreations-frame');function i(){(function(){var e=n.getBoundingClientRect(),t=n.clientHeight/2,i=n.clientWidth/2;return e.top>=0&&e.left>=0&&e.top<=(window.innerHeight||document.documentElement.clientHeight)-t&&e.left<=(window.innerWidth||document.documentElement.clientWidth)-i})(n)&&n.contentWindow.postMessage('startBlueCreationsCampaign','*')}window.addEventListener('message',function(){t&&('blueCreationsLoaded'===t.data?e('remove'):'blueCreationsCampaignLoaded'===t.data&&(window.location.href=t.data.options.link))},!1),e('attach')}embedBlueCreations('.bluecreations-frame');"></iframe>`
+      );
     }
   };
 
@@ -181,7 +196,6 @@ export default function CreateDialogueModal({
       console.error("Failed to copy code:", error);
     }
   };
-
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -197,11 +211,12 @@ export default function CreateDialogueModal({
         for (let i = 0; i < selectedVersions.length; i++) {
           const versionIndex = selectedVersions[i];
           const selectedVariation = recommendations.variations[versionIndex];
-          
+
           // Create unique campaign name if multiple selections
-          const uniqueCampaignName = selectedVersions.length > 1 
-            ? `${campaignName} - ${selectedVariation.widgetType} ${i + 1}`
-            : campaignName;
+          const uniqueCampaignName =
+            selectedVersions.length > 1
+              ? `${campaignName} - ${selectedVariation.widgetType} ${i + 1}`
+              : campaignName;
 
           const saveData = {
             campaignName: uniqueCampaignName,
@@ -243,10 +258,18 @@ export default function CreateDialogueModal({
           const result = await response.json();
           console.log(`Campaign ${i + 1} saved successfully:`, result);
         }
-        // You could show a success message here
+        // Show success toast notification
+        toast.success("Campaign published successfully!", {
+          description: `${selectedVersions.length} variation${
+            selectedVersions.length > 1 ? "s" : ""
+          } saved and ready to embed`,
+        });
       } catch (error) {
         console.error("Error saving campaigns:", error);
-        // You could show an error message here
+        // Show error toast notification
+        toast.error("Failed to publish campaign", {
+          description: "Please try again or check your connection",
+        });
         return; // Don't close modal if save failed
       }
     }
@@ -265,7 +288,7 @@ export default function CreateDialogueModal({
     setSelectedVersions(
       (prev) =>
         prev.includes(versionIndex)
-          ? prev.filter(index => index !== versionIndex) // Remove from selection
+          ? prev.filter((index) => index !== versionIndex) // Remove from selection
           : [...prev, versionIndex] // Add to selection (multiple selection)
     );
   };
@@ -273,12 +296,12 @@ export default function CreateDialogueModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogOverlay className="bg-black/40 backdrop-blur-sm" />
-      <DialogContent className="max-w-[1120px] h-[780px] p-0 gap-0 bg-zinc-100 rounded-2xl overflow-hidden flex">
+      <DialogContent className="max-w-[1120px] h-[780px] p-0 gap-0 bg-muted rounded-2xl overflow-hidden flex">
         {/* Sidebar Navigation */}
         <div className="w-64 h-full p-6 flex flex-col justify-between shrink-0">
           <div className="space-y-5 relative">
             {/* Connector Line */}
-            <div className="absolute left-4 top-[18px] bottom-[18px] w-px bg-zinc-400" />
+            <div className="absolute left-4 top-[18px] bottom-[18px] w-px bg-border" />
 
             {STEPS.map((step) => (
               <div
@@ -288,15 +311,15 @@ export default function CreateDialogueModal({
                 <div
                   className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm font-medium ${
                     step.number === currentStep
-                      ? "bg-white border-primary text-primary"
+                      ? "bg-background border-primary text-primary"
                       : step.number < currentStep
                       ? "bg-primary border-primary text-primary-foreground"
-                      : "bg-white border-zinc-200 text-zinc-900"
+                      : "bg-background border-border text-foreground"
                   }`}
                 >
                   {step.number}
                 </div>
-                <span className="text-sm text-zinc-900">{step.title}</span>
+                <span className="text-sm text-foreground">{step.title}</span>
               </div>
             ))}
           </div>
@@ -310,14 +333,14 @@ export default function CreateDialogueModal({
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 bg-white shadow-sm flex flex-col min-h-0">
+        <div className="flex-1 bg-background shadow-sm flex flex-col min-h-0">
           {/* Header */}
           <div className="px-6 pt-6 pb-4 shrink-0">
             <div className="space-y-1">
-              <h2 className="text-xl font-semibold text-zinc-900">
+              <h2 className="text-xl font-semibold text-foreground">
                 {STEPS[currentStep - 1]?.title}
               </h2>
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 {currentStep === 1 &&
                   "Pick your goal, upload products, and set prompts. Our AI personalizes every visit in real time."}
                 {currentStep === 2 &&
@@ -330,12 +353,12 @@ export default function CreateDialogueModal({
 
           {/* Form Content - Scrollable */}
           <div className="flex-1 overflow-y-auto px-6 min-h-0">
-            <div className="space-y-6 pb-6">
+            <div className="space-y-6 pb-6 pt-6">
               {currentStep === 1 && (
                 <>
                   {/* Campaign Objective */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-900">
+                  <div className="space-y-2 !mt-0">
+                    <label className="text-sm font-medium text-foreground">
                       Campaign objective
                     </label>
                     <Select
@@ -369,20 +392,20 @@ export default function CreateDialogueModal({
 
                   {/* Product List */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-900">
+                    <label className="text-sm font-medium text-foreground">
                       Product list
                     </label>
-                    <div className="h-9 bg-white border border-zinc-200 rounded-md shadow-sm flex items-center px-3 py-2">
-                      <span className="flex-1 text-sm text-zinc-900">
+                    <div className="h-9 bg-background border border-border rounded-md shadow-sm flex items-center px-3 py-2">
+                      <span className="flex-1 text-sm text-foreground">
                         {formData.productList}
                       </span>
-                      <FileSpreadsheet className="h-4 w-4 text-zinc-500" />
+                      <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </div>
 
                   {/* Additional Prompt */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-900">
+                    <label className="text-sm font-medium text-foreground">
                       Additional prompt
                     </label>
                     <Textarea
@@ -411,7 +434,7 @@ export default function CreateDialogueModal({
                           className={`relative cursor-pointer transition-all p-6 rounded-lg ${
                             selectedVersions.includes(versionIndex)
                               ? "border-2 border-primary bg-primary/5"
-                              : "border border-zinc-200 hover:border-zinc-300 hover:shadow-md bg-white"
+                              : "border border-border hover:border-border hover:shadow-md bg-background"
                           }`}
                         >
                           {selectedVersions.includes(versionIndex) && (
@@ -421,17 +444,18 @@ export default function CreateDialogueModal({
                           )}
 
                           {/* Header */}
-                          <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                            Hey User, based on your history I've got some products I think you'll love!
+                          <h3 className="text-lg font-semibold text-foreground mb-3">
+                            Hey User, based on your history I've got some
+                            products I think you'll love!
                           </h3>
-                          
+
                           {/* Description with Persuasive Text */}
-                          <p className="text-sm text-gray-600 mb-6">
+                          <p className="text-sm text-muted-foreground mb-6">
                             {variation.text}
                           </p>
-                          
+
                           {/* Products from API */}
-                          <div className="bg-white rounded-lg p-4 border">
+                          <div className="bg-white rounded-lg ">
                             {/* Inject CSS from API */}
                             <style
                               dangerouslySetInnerHTML={{
@@ -445,17 +469,19 @@ export default function CreateDialogueModal({
                               }}
                             />
                           </div>
-                          
+
                           {/* Footer */}
                           <div className="mt-4 text-center">
-                            <p className="text-xs text-gray-400">Blueconic AI can make mistakes. Learn more</p>
+                            <p className="text-xs text-gray-400">
+                              Blueconic AI can make mistakes. Learn more
+                            </p>
                           </div>
                         </div>
                       )
                     )
                   ) : (
                     /* Loading/No data state */
-                    <div className="flex items-center justify-center h-64 text-zinc-400">
+                    <div className="flex items-center justify-center h-64 text-muted-foreground">
                       <p>
                         No variations available. Please complete step 1 first.
                       </p>
@@ -474,7 +500,7 @@ export default function CreateDialogueModal({
                         <div className="bg-[#1c1c1c] p-5">
                           {isGeneratingIframe ? (
                             <div className="flex items-center justify-center h-32">
-                              <div className="flex items-center gap-2 text-zinc-400">
+                              <div className="flex items-center gap-2 text-muted-foreground">
                                 <Loader2 className="h-4 w-4 animate-spin" />
                                 Generating embed code...
                               </div>
@@ -482,29 +508,42 @@ export default function CreateDialogueModal({
                           ) : iframeCode ? (
                             <div className="font-mono text-sm text-white/40 leading-5 overflow-x-auto">
                               <pre className="whitespace-pre overflow-x-auto min-w-full">
-                                <code 
+                                <code
                                   className="block text-left break-all"
-                                  style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
-                                  dangerouslySetInnerHTML={{ 
+                                  style={{
+                                    wordBreak: "break-all",
+                                    whiteSpace: "pre-wrap",
+                                    overflowWrap: "anywhere",
+                                  }}
+                                  dangerouslySetInnerHTML={{
                                     __html: iframeCode
-                                      .replace(/</g, '&lt;')
-                                      .replace(/>/g, '&gt;')
-                                      .replace(/(&lt;)(\/?)(iframe|script)(\s|&gt;)/g, '$1<span class="text-blue-400/60">$2$3</span>$4')
-                                      .replace(/(src|width|height|loading|style|async|class|frameborder|seamless|webkitallowfullscreen|mozallowfullscreen|allowfullscreen|onload)/g, '<span class="text-blue-400">$1</span>')
-                                      .replace(/=("[^"]*")/g, '=<span class="text-orange-300">$1</span>')
-                                  }} 
+                                      .replace(/</g, "&lt;")
+                                      .replace(/>/g, "&gt;")
+                                      .replace(
+                                        /(&lt;)(\/?)(iframe|script)(\s|&gt;)/g,
+                                        '$1<span class="text-blue-400/60">$2$3</span>$4'
+                                      )
+                                      .replace(
+                                        /(src|width|height|loading|style|async|class|frameborder|seamless|webkitallowfullscreen|mozallowfullscreen|allowfullscreen|onload)/g,
+                                        '<span class="text-blue-400">$1</span>'
+                                      )
+                                      .replace(
+                                        /=("[^"]*")/g,
+                                        '=<span class="text-orange-300">$1</span>'
+                                      ),
+                                  }}
                                 />
                               </pre>
                             </div>
                           ) : (
                             <div className="flex items-center justify-center h-32">
-                              <p className="text-zinc-400 text-sm">
+                              <p className="text-muted-foreground text-sm">
                                 No embed code generated yet
                               </p>
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Copy Button */}
                         <Button
                           onClick={handleCopyCode}
@@ -523,10 +562,10 @@ export default function CreateDialogueModal({
           </div>
 
           {/* Footer - Fixed at bottom */}
-          <div className="border-t border-zinc-200 px-6 py-4 shrink-0 bg-white">
+          <div className="border-t border-border px-6 py-4 shrink-0 bg-background">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-muted-foreground">
                   Blueconic AI can make mistakes.{" "}
                   <button className="underline hover:no-underline">
                     Learn more
@@ -550,27 +589,45 @@ export default function CreateDialogueModal({
                     Publish
                   </Button>
                 ) : (
-                  <Button
-                    onClick={handleNext}
-                    disabled={currentStep >= STEPS.length || isLoading || (currentStep === 2 && isGeneratingIframe)}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:bg-gray-400"
-                  >
-                    {isLoading || (currentStep === 2 && isGeneratingIframe) ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {currentStep === 2 ? "Generating..." : "Loading..."}
-                      </>
-                    ) : (
-                      "Next"
-                    )}
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={handleNext}
+                          disabled={
+                            currentStep >= STEPS.length ||
+                            isLoading ||
+                            (currentStep === 2 && isGeneratingIframe) ||
+                            (currentStep === 2 && selectedVersions.length === 0)
+                          }
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:bg-gray-400"
+                        >
+                          {isLoading ||
+                          (currentStep === 2 && isGeneratingIframe) ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              {currentStep === 2
+                                ? "Generating..."
+                                : "Loading..."}
+                            </>
+                          ) : (
+                            "Next"
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      {currentStep === 2 && selectedVersions.length === 0 && (
+                        <TooltipContent>
+                          <p>Select at least one version first</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </div>
             </div>
           </div>
         </div>
       </DialogContent>
-
     </Dialog>
   );
 }

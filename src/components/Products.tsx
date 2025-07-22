@@ -86,7 +86,7 @@ function FilterTabs() {
 export default function Products() {
   return (
     <div className="flex-1 overflow-auto">
-      <div className="p-6 space-y-6">
+      <div className="px-12 py-6 space-y-6">
         {/* Filter Controls */}
         <FilterTabs />
 
