@@ -307,14 +307,14 @@ export default function CreateDialogueModal({
       <DialogContent className="max-w-[1120px] h-[780px] p-0 gap-0 bg-muted rounded-2xl overflow-hidden flex">
         {/* Sidebar Navigation */}
         <div className="w-64 h-full p-6 flex flex-col justify-between shrink-0">
-          <div className="space-y-5 relative">
+          <div className="relative">
             {/* Connector Line */}
             <div className="absolute left-4 top-[18px] bottom-[18px] w-px bg-border" />
 
-            {STEPS.map((step) => (
+            {STEPS.map((step, index) => (
               <div
                 key={step.number}
-                className="flex items-center gap-2 relative z-10"
+                className={`flex items-center gap-2 relative z-10 ${index < STEPS.length - 1 ? 'mb-5' : ''}`}
               >
                 <div
                   className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm font-medium ${

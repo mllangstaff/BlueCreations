@@ -31,6 +31,8 @@ import {
   Filter,
   MoreVertical,
   Upload,
+  Search,
+  ShoppingCart,
 } from "lucide-react";
 
 // Campaign interface
@@ -146,13 +148,13 @@ function Header({
   const getPageTitle = (page: string) => {
     switch (page) {
       case "dashboard":
-        return "Dashboard";
+        return "My Dashboard";
       case "analytics":
         return "Analytics";
       case "products":
         return "My Products";
       default:
-        return "Dashboard";
+        return "My Dashboard";
     }
   };
 
@@ -229,10 +231,20 @@ function FilterTabs() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      <Button variant="outline" size="sm">
-        <Filter className="h-4 w-4 mr-2" />
-        Filter
-      </Button>
+      <div className="flex items-center gap-4">
+        <div className="relative w-[200px]">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search...."
+            className="w-full h-9 pl-9 pr-3 py-1 text-sm bg-background border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          />
+        </div>
+        <Button variant="outline" size="sm">
+          <Filter className="h-4 w-4 mr-2" />
+          Filter
+        </Button>
+      </div>
     </div>
   );
 }
@@ -309,10 +321,25 @@ function DashboardContent({
               <p className="text-red-500">Error: {error}</p>
             </div>
           ) : campaigns.length === 0 ? (
-            <div className="flex items-center justify-center h-64">
-              <p className="text-muted-foreground">
-                No campaigns found. Create your first campaign!
-              </p>
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-300px)] text-center space-y-10">
+              {/* Shopping Cart Illustration */}
+              <div className="w-[284px] h-[280px] overflow-hidden relative">
+                <img 
+                  src="http://localhost:3845/assets/0e775bdb5516d7b0ebb9ddc6e18a6188a1c42209.svg" 
+                  alt="Shopping cart illustration"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              
+              {/* Content */}
+              <div className="flex flex-col items-center gap-1">
+                <h3 className="text-xl font-semibold text-slate-900 leading-7">
+                  Nothing here… yet!
+                </h3>
+                <p className="text-sm text-slate-500 leading-5">
+                  Create a dialogue and start selling smarter
+                </p>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
