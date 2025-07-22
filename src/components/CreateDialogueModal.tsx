@@ -60,7 +60,7 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
     if (currentStep < STEPS.length) {
       if (currentStep === 1) {
         try {
-          const response = await fetch('http://localhost:3000/generate', {
+          const response = await fetch('http://localhost:3000/backoffice/generate', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -111,9 +111,9 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
             css: selectedVariation.css,
             text: selectedVariation.text
           },
+          targetingCriteria: {}, // You can populate this with targeting data
           category: "all", // Default as specified in API
-          additionalPrompt: formData.additionalPrompt || undefined,
-          notes: undefined // Optional field, can be added later
+          notes: "" // Empty string for now
         }
 
         console.log('Saving campaign with variation:', {
@@ -124,7 +124,7 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
           textLength: selectedVariation.text.length
         })
 
-        const response = await fetch('http://localhost:3000/save-campaign', {
+        const response = await fetch('http://localhost:3000/backoffice/save-campaign', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

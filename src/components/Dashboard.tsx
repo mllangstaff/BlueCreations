@@ -282,7 +282,7 @@ export default function Dashboard() {
         setIsLoading(true)
         setError(null)
         
-        const response = await fetch('http://localhost:3000/campaigns')
+        const response = await fetch('http://localhost:3000/backoffice/campaigns')
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
@@ -319,7 +319,7 @@ export default function Dashboard() {
     if (!open) {
       const refetchCampaigns = async () => {
         try {
-          const response = await fetch('http://localhost:3000/campaigns')
+          const response = await fetch('http://localhost:3000/backoffice/campaigns')
           if (response.ok) {
             const data: CampaignsResponse = await response.json()
             if (data.success && data.campaigns) {
