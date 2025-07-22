@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { Card, CardContent } from '@/components/ui/card'
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Sidebar,
   SidebarContent,
@@ -17,11 +17,11 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
-} from '@/components/ui/sidebar'
-import CreateDialogueModal from './CreateDialogueModal'
-import Products from './Products'
-import GroupIcon from '../assets/Group.svg'
-import { ThemeToggle } from './ThemeToggle'
+} from "@/components/ui/sidebar";
+import CreateDialogueModal from "./CreateDialogueModal";
+import Products from "./Products";
+import GroupIcon from "../assets/Group.svg";
+import { ThemeToggle } from "./ThemeToggle";
 import {
   LayoutGrid,
   BarChart3,
@@ -30,46 +30,52 @@ import {
   Plus,
   Filter,
   MoreVertical,
-  Upload
-} from 'lucide-react'
+  Upload,
+} from "lucide-react";
 
 // Campaign interface
 interface Campaign {
-  id: string
-  name: string
-  objective: string
+  id: string;
+  name: string;
+  objective: string;
   variation: {
-    widgetType: string
-    html: string
-    css: string
-    text: string
-  }
-  category?: string
-  additionalPrompt?: string
-  notes?: string
-  createdAt?: string
-  updatedAt?: string
+    widgetType: string;
+    html: string;
+    css: string;
+    text: string;
+  };
+  category?: string;
+  additionalPrompt?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // API Response interface
 interface CampaignsResponse {
-  success: boolean
-  campaigns: Campaign[]
+  success: boolean;
+  campaigns: Campaign[];
   pagination: {
-    total: number
-    limit: number
-    offset: number
-    page: number
-    totalPages: number
-    hasMore: boolean
-  }
+    total: number;
+    limit: number;
+    offset: number;
+    page: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
   filters: {
-    category: string
-    search: string | null
-  }
+    category: string;
+    search: string | null;
+  };
 }
 
-function AppSidebar({ currentPage, onNavigate }: { currentPage: string; onNavigate: (page: string) => void }) {
+function AppSidebar({
+  currentPage,
+  onNavigate,
+}: {
+  currentPage: string;
+  onNavigate: (page: string) => void;
+}) {
   return (
     <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader>
@@ -82,30 +88,30 @@ function AppSidebar({ currentPage, onNavigate }: { currentPage: string; onNaviga
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={currentPage === 'dashboard'} 
+                <SidebarMenuButton
+                  isActive={currentPage === "dashboard"}
                   tooltip="Dashboard"
-                  onClick={() => onNavigate('dashboard')}
+                  onClick={() => onNavigate("dashboard")}
                 >
                   <LayoutGrid className="h-4 w-4" />
                   <span>Dashboard</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={currentPage === 'analytics'} 
+                <SidebarMenuButton
+                  isActive={currentPage === "analytics"}
                   tooltip="Analytics"
-                  onClick={() => onNavigate('analytics')}
+                  onClick={() => onNavigate("analytics")}
                 >
                   <BarChart3 className="h-4 w-4" />
                   <span>Analytics</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={currentPage === 'products'} 
+                <SidebarMenuButton
+                  isActive={currentPage === "products"}
                   tooltip="Products"
-                  onClick={() => onNavigate('products')}
+                  onClick={() => onNavigate("products")}
                 >
                   <FileSpreadsheet className="h-4 w-4" />
                   <span>Products</span>
@@ -120,47 +126,59 @@ function AppSidebar({ currentPage, onNavigate }: { currentPage: string; onNaviga
           <ThemeToggle />
           <Avatar className="w-8 h-8">
             <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
-            <AvatarFallback className="bg-zinc-900 text-white text-xs">U</AvatarFallback>
+            <AvatarFallback className="bg-zinc-900 text-white text-xs">
+              U
+            </AvatarFallback>
           </Avatar>
         </div>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
 
-function Header({ onCreateDialogue, currentPage }: { onCreateDialogue: () => void; currentPage: string }) {
+function Header({
+  onCreateDialogue,
+  currentPage,
+}: {
+  onCreateDialogue: () => void;
+  currentPage: string;
+}) {
   const getPageTitle = (page: string) => {
     switch (page) {
-      case 'dashboard': return 'Dashboard'
-      case 'analytics': return 'Analytics'
-      case 'products': return 'My Products'
-      default: return 'Dashboard'
+      case "dashboard":
+        return "Dashboard";
+      case "analytics":
+        return "Analytics";
+      case "products":
+        return "My Products";
+      default:
+        return "Dashboard";
     }
-  }
+  };
 
   const renderActionButton = () => {
     switch (currentPage) {
-      case 'dashboard':
+      case "dashboard":
         return (
-          <Button 
+          <Button
             onClick={onCreateDialogue}
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Dialogue
           </Button>
-        )
-      case 'products':
+        );
+      case "products":
         return (
           <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <Upload className="h-4 w-4 mr-2" />
             Upload Product Feed
           </Button>
-        )
+        );
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <div className="h-16 border-b border-border bg-background">
@@ -170,12 +188,14 @@ function Header({ onCreateDialogue, currentPage }: { onCreateDialogue: () => voi
             <PanelLeft className="h-4 w-4" />
           </Button>
           <Separator orientation="vertical" className="h-4" />
-          <span className="text-sm font-normal text-foreground">{getPageTitle(currentPage)}</span>
+          <span className="text-sm font-normal text-foreground">
+            {getPageTitle(currentPage)}
+          </span>
         </div>
         {renderActionButton()}
       </div>
     </div>
-  )
+  );
 }
 
 function FilterTabs() {
@@ -183,10 +203,30 @@ function FilterTabs() {
     <div className="flex items-center justify-between w-full">
       <Tabs defaultValue="all" className="w-auto">
         <TabsList className="bg-muted p-1">
-          <TabsTrigger value="all" className="text-sm font-medium data-[state=inactive]:text-muted-foreground">All</TabsTrigger>
-          <TabsTrigger value="active" className="text-sm font-medium data-[state=inactive]:text-muted-foreground">Active</TabsTrigger>
-          <TabsTrigger value="draft" className="text-sm font-medium data-[state=inactive]:text-muted-foreground">Draft</TabsTrigger>
-          <TabsTrigger value="archived" className="text-sm font-medium data-[state=inactive]:text-muted-foreground">Archived</TabsTrigger>
+          <TabsTrigger
+            value="all"
+            className="text-sm font-medium data-[state=inactive]:text-muted-foreground"
+          >
+            All
+          </TabsTrigger>
+          <TabsTrigger
+            value="active"
+            className="text-sm font-medium data-[state=inactive]:text-muted-foreground"
+          >
+            Active
+          </TabsTrigger>
+          <TabsTrigger
+            value="draft"
+            className="text-sm font-medium data-[state=inactive]:text-muted-foreground"
+          >
+            Draft
+          </TabsTrigger>
+          <TabsTrigger
+            value="archived"
+            className="text-sm font-medium data-[state=inactive]:text-muted-foreground"
+          >
+            Archived
+          </TabsTrigger>
         </TabsList>
       </Tabs>
       <Button variant="outline" size="sm">
@@ -194,23 +234,23 @@ function FilterTabs() {
         Filter
       </Button>
     </div>
-  )
+  );
 }
 
 // Helper function to format relative time
 function getRelativeTime(dateString?: string) {
-  if (!dateString) return 'Unknown'
-  
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return '1 day ago'
-  if (diffDays < 7) return `${diffDays} days ago`
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
-  return `${Math.floor(diffDays / 30)} months ago`
+  if (!dateString) return "Unknown";
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "1 day ago";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return `${Math.floor(diffDays / 30)} months ago`;
 }
 
 function DialogueCard({ campaign }: { campaign: Campaign }) {
@@ -218,7 +258,7 @@ function DialogueCard({ campaign }: { campaign: Campaign }) {
     <Card className="overflow-hidden">
       {/* Placeholder image area */}
       <div className="aspect-[3/2] bg-muted" />
-      
+
       <CardContent className="p-5">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -226,10 +266,12 @@ function DialogueCard({ campaign }: { campaign: Campaign }) {
               {campaign.name}
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              {campaign.variation.widgetType.replace('_', ' ')} • {campaign.objective.replace('-', ' ')}
+              {campaign.variation.widgetType.replace("_", " ")} •{" "}
+              {campaign.objective.replace("-", " ")}
             </p>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Updated {getRelativeTime(campaign.updatedAt || campaign.createdAt)}
+              Updated{" "}
+              {getRelativeTime(campaign.updatedAt || campaign.createdAt)}
             </p>
           </div>
           <Button variant="ghost" size="sm" className="p-1 h-6 w-6 shrink-0">
@@ -238,20 +280,24 @@ function DialogueCard({ campaign }: { campaign: Campaign }) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
-function DashboardContent({ campaigns, isLoading, error }: { 
-  campaigns: Campaign[]
-  isLoading: boolean
-  error: string | null
+function DashboardContent({
+  campaigns,
+  isLoading,
+  error,
+}: {
+  campaigns: Campaign[];
+  isLoading: boolean;
+  error: string | null;
 }) {
   return (
     <div className="flex-1 overflow-auto">
       <div className="px-12 py-6 space-y-6">
         {/* Filter Controls */}
         <FilterTabs />
-        
+
         {/* Campaign Cards Grid */}
         <div className="space-y-4">
           {isLoading ? (
@@ -264,7 +310,9 @@ function DashboardContent({ campaigns, isLoading, error }: {
             </div>
           ) : campaigns.length === 0 ? (
             <div className="flex items-center justify-center h-64">
-              <p className="text-muted-foreground">No campaigns found. Create your first campaign!</p>
+              <p className="text-muted-foreground">
+                No campaigns found. Create your first campaign!
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -276,100 +324,118 @@ function DashboardContent({ campaigns, isLoading, error }: {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default function Dashboard() {
-  const [isCreateDialogueModalOpen, setIsCreateDialogueModalOpen] = useState(false)
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState('dashboard')
+  const [isCreateDialogueModalOpen, setIsCreateDialogueModalOpen] =
+    useState(false);
+  const [currentPage, setCurrentPage] = useState("dashboard");
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch campaigns from API
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
-        setIsLoading(true)
-        setError(null)
-        
-        const response = await fetch('http://localhost:3000/backoffice/campaigns')
-        
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch(
+          "http://localhost:3000/backoffice/campaigns"
+        );
+
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const data: CampaignsResponse = await response.json()
-        console.log('Fetched campaigns:', data)
-        
+
+        const data: CampaignsResponse = await response.json();
+        console.log("Fetched campaigns:", data);
+
         if (data.success && data.campaigns) {
-          setCampaigns(data.campaigns)
+          setCampaigns(data.campaigns);
         } else {
-          throw new Error('Invalid response format')
+          throw new Error("Invalid response format");
         }
       } catch (err) {
-        console.error('Error fetching campaigns:', err)
-        setError(err instanceof Error ? err.message : 'Failed to fetch campaigns')
-        setCampaigns([]) // Reset to empty array on error
+        console.error("Error fetching campaigns:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch campaigns"
+        );
+        setCampaigns([]); // Reset to empty array on error
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchCampaigns()
-  }, [])
+    fetchCampaigns();
+  }, []);
 
   const handleCreateDialogue = () => {
-    setIsCreateDialogueModalOpen(true)
-  }
+    setIsCreateDialogueModalOpen(true);
+  };
 
   const handleNavigate = (page: string) => {
-    setCurrentPage(page)
-  }
+    setCurrentPage(page);
+  };
 
   const handleModalClose = (open: boolean) => {
-    setIsCreateDialogueModalOpen(open)
+    setIsCreateDialogueModalOpen(open);
     // Refetch campaigns when modal closes (in case a new campaign was saved)
     if (!open) {
       const refetchCampaigns = async () => {
         try {
-          const response = await fetch('http://localhost:3000/backoffice/campaigns')
+          const response = await fetch(
+            "http://localhost:3000/backoffice/campaigns"
+          );
           if (response.ok) {
-            const data: CampaignsResponse = await response.json()
+            const data: CampaignsResponse = await response.json();
             if (data.success && data.campaigns) {
-              setCampaigns(data.campaigns)
+              setCampaigns(data.campaigns);
             }
           }
         } catch (err) {
-          console.error('Error refetching campaigns:', err)
+          console.error("Error refetching campaigns:", err);
         }
-      }
-      refetchCampaigns()
+      };
+      refetchCampaigns();
     }
-  }
+  };
 
   const renderContent = () => {
     switch (currentPage) {
-      case 'analytics':
+      case "analytics":
         return (
           <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">Analytics page coming soon...</p>
+            <p className="text-muted-foreground">
+              Analytics page coming soon...
+            </p>
           </div>
-        )
-      case 'products':
-        return <Products />
+        );
+      case "products":
+        return <Products />;
       default:
-        return <DashboardContent campaigns={campaigns} isLoading={isLoading} error={error} />
+        return (
+          <DashboardContent
+            campaigns={campaigns}
+            isLoading={isLoading}
+            error={error}
+          />
+        );
     }
-  }
+  };
 
   return (
     <SidebarProvider defaultOpen={false}>
       <AppSidebar currentPage={currentPage} onNavigate={handleNavigate} />
       <SidebarInset>
         {/* Header */}
-        <Header onCreateDialogue={handleCreateDialogue} currentPage={currentPage} />
-        
+        <Header
+          onCreateDialogue={handleCreateDialogue}
+          currentPage={currentPage}
+        />
+
         {/* Content Area */}
         {renderContent()}
       </SidebarInset>
@@ -380,5 +446,5 @@ export default function Dashboard() {
         onOpenChange={handleModalClose}
       />
     </SidebarProvider>
-  )
+  );
 }

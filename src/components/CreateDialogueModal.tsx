@@ -1,171 +1,189 @@
-import { useState } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogOverlay,
-} from '@/components/ui/dialog'
+import { useState } from "react";
+import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { FileSpreadsheet } from 'lucide-react'
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { FileSpreadsheet, Loader2 } from "lucide-react";
 
 interface CreateDialogueModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 interface Variation {
-  id: string
-  widgetType: string
-  html: string
-  css: string
-  text: string
+  id: string;
+  widgetType: string;
+  html: string;
+  css: string;
+  text: string;
 }
 
 interface RecommendationsResponse {
-  success: boolean
-  variations: Variation[]
-  campaignObjective: string
-  productCount: number
-  category: string
-  availableCategories: string[]
-  generatedAt: string
+  success: boolean;
+  variations: Variation[];
+  campaignObjective: string;
+  productCount: number;
+  category: string;
+  availableCategories: string[];
+  generatedAt: string;
 }
 
 const STEPS = [
-  { number: 1, title: 'Overview' },
-  { number: 2, title: 'Versions' },
-  { number: 3, title: 'Code snippet' },
-]
+  { number: 1, title: "Overview" },
+  { number: 2, title: "Versions" },
+  { number: 3, title: "Code snippet" },
+];
 
-export default function CreateDialogueModal({ open, onOpenChange }: CreateDialogueModalProps) {
-  const [currentStep, setCurrentStep] = useState(1)
+export default function CreateDialogueModal({
+  open,
+  onOpenChange,
+}: CreateDialogueModalProps) {
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    campaignObjective: '',
-    productList: 'Allproducts.csv',
-    additionalPrompt: ''
-  })
-  const [campaignName, setCampaignName] = useState('')
-  const [selectedVersions, setSelectedVersions] = useState<number[]>([]) // User can select none or multiple
-  const [recommendations, setRecommendations] = useState<RecommendationsResponse | null>(null)
+    campaignObjective: "",
+    productList: "Allproducts.csv",
+    additionalPrompt: "",
+  });
+  const [campaignName, setCampaignName] = useState("");
+  const [selectedVersions, setSelectedVersions] = useState<number[]>([]); // User can select none or multiple
+  const [recommendations, setRecommendations] =
+    useState<RecommendationsResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleNext = async () => {
     if (currentStep < STEPS.length) {
       if (currentStep === 1) {
+        setIsLoading(true);
         try {
-          const response = await fetch('http://localhost:3000/backoffice/generate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              campaignObjective: formData.campaignObjective,
-              productList: formData.productList,
-              additionalPrompt: formData.additionalPrompt
-            })
-          })
-          
+          const response = await fetch(
+            "http://localhost:3000/backoffice/generate",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                campaignObjective: formData.campaignObjective,
+                productList: formData.productList,
+                additionalPrompt: formData.additionalPrompt,
+              }),
+            }
+          );
+
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
+            throw new Error(`HTTP error! status: ${response.status}`);
           }
-          
-          const recommendationsData = await response.json()
-          console.log('Received recommendations:', recommendationsData)
-          setRecommendations(recommendationsData)
+
+          const recommendationsData = await response.json();
+          console.log("Received recommendations:", recommendationsData);
+          setRecommendations(recommendationsData);
+
+          // Only advance to next step after successful API call
+          setCurrentStep(currentStep + 1);
         } catch (error) {
-          console.error('Error generating recommendations:', error)
+          console.error("Error generating recommendations:", error);
           // You might want to show an error message to the user here
+        } finally {
+          setIsLoading(false);
         }
+      } else {
+        // For other steps, advance immediately
+        setCurrentStep(currentStep + 1);
       }
-      setCurrentStep(currentStep + 1)
     }
-  }
+  };
 
   const handleBack = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
+      setCurrentStep(currentStep - 1);
     }
-  }
+  };
 
   const handleSaveAndClose = async () => {
     // If on step 3, save the selected variations to backend
     if (currentStep === 3 && recommendations && selectedVersions.length > 0) {
       try {
-        // Get the first selected variation (API expects single variation)
-        const firstSelectedIndex = selectedVersions[0]
-        const selectedVariation = recommendations.variations[firstSelectedIndex]
-        
-        const saveData = {
-          campaignName: campaignName,
-          campaignObjective: formData.campaignObjective,
-          variation: {
+        // Save each selected variation as a separate campaign
+        for (let i = 0; i < selectedVersions.length; i++) {
+          const versionIndex = selectedVersions[i];
+          const selectedVariation = recommendations.variations[versionIndex];
+          
+          // Create unique campaign name if multiple selections
+          const uniqueCampaignName = selectedVersions.length > 1 
+            ? `${campaignName} - ${selectedVariation.widgetType} ${i + 1}`
+            : campaignName;
+
+          const saveData = {
+            campaignName: uniqueCampaignName,
+            campaignObjective: formData.campaignObjective,
+            variation: {
+              widgetType: selectedVariation.widgetType,
+              html: selectedVariation.html,
+              css: selectedVariation.css,
+              text: selectedVariation.text,
+            },
+            targetingCriteria: {}, // You can populate this with targeting data
+            category: "all", // Default as specified in API
+            notes: "", // Empty string for now
+          };
+
+          console.log(`Saving campaign ${i + 1}/${selectedVersions.length}:`, {
+            campaignName: uniqueCampaignName,
             widgetType: selectedVariation.widgetType,
-            html: selectedVariation.html,
-            css: selectedVariation.css,
-            text: selectedVariation.text
-          },
-          targetingCriteria: {}, // You can populate this with targeting data
-          category: "all", // Default as specified in API
-          notes: "" // Empty string for now
-        }
+            htmlLength: selectedVariation.html.length,
+            cssLength: selectedVariation.css.length,
+            textLength: selectedVariation.text.length,
+          });
 
-        console.log('Saving campaign with variation:', {
-          campaignName,
-          widgetType: selectedVariation.widgetType,
-          htmlLength: selectedVariation.html.length,
-          cssLength: selectedVariation.css.length,
-          textLength: selectedVariation.text.length
-        })
+          const response = await fetch(
+            "http://localhost:3000/backoffice/save-campaign",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(saveData),
+            }
+          );
 
-        const response = await fetch('http://localhost:3000/backoffice/save-campaign', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(saveData)
-        })
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const result = await response.json();
+          console.log(`Campaign ${i + 1} saved successfully:`, result);
         }
-        
-        const result = await response.json()
-        console.log('Campaign saved successfully:', result)
         // You could show a success message here
-        
       } catch (error) {
-        console.error('Error saving campaign:', error)
+        console.error("Error saving campaigns:", error);
         // You could show an error message here
-        return // Don't close modal if save failed
+        return; // Don't close modal if save failed
       }
     }
-    
+
     // Close modal and reset
-    onOpenChange(false)
-    setCurrentStep(1)
-    setSelectedVersions([])
-    setRecommendations(null)
-    setCampaignName('')
-  }
+    onOpenChange(false);
+    setCurrentStep(1);
+    setSelectedVersions([]);
+    setRecommendations(null);
+    setCampaignName("");
+  };
 
   const toggleVersionSelection = (versionIndex: number) => {
-    setSelectedVersions(prev => 
-      prev.includes(versionIndex)
-        ? [] // Deselect if clicking the same one
-        : [versionIndex] // Select only this one (single selection)
-    )
-  }
-
-
-
-
+    setSelectedVersions(
+      (prev) =>
+        prev.includes(versionIndex)
+          ? prev.filter(index => index !== versionIndex) // Remove from selection
+          : [...prev, versionIndex] // Add to selection (multiple selection)
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -176,16 +194,19 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
           <div className="space-y-5 relative">
             {/* Connector Line */}
             <div className="absolute left-4 top-[18px] bottom-[18px] w-px bg-zinc-400" />
-            
+
             {STEPS.map((step) => (
-              <div key={step.number} className="flex items-center gap-2 relative z-10">
-                <div 
+              <div
+                key={step.number}
+                className="flex items-center gap-2 relative z-10"
+              >
+                <div
                   className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm font-medium ${
                     step.number === currentStep
-                      ? 'bg-white border-blue-600 text-blue-600'
+                      ? "bg-white border-primary text-primary"
                       : step.number < currentStep
-                      ? 'bg-blue-600 border-blue-600 text-white'
-                      : 'bg-white border-zinc-200 text-zinc-900'
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : "bg-white border-zinc-200 text-zinc-900"
                   }`}
                 >
                   {step.number}
@@ -194,10 +215,10 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
               </div>
             ))}
           </div>
-          
-          <button 
+
+          <button
             onClick={handleSaveAndClose}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 text-left"
+            className="text-sm font-medium text-primary hover:text-primary/80 text-left"
           >
             Save & close
           </button>
@@ -212,9 +233,12 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
                 {STEPS[currentStep - 1]?.title}
               </h2>
               <p className="text-sm text-zinc-500">
-                {currentStep === 1 && "Pick your goal, upload products, and set prompts. Our AI personalizes every visit in real time."}
-                {currentStep === 2 && "Choose the variation that best fits your campaign. You can select one option."}
-                {currentStep === 3 && "Review your campaign details and save your configuration."}
+                {currentStep === 1 &&
+                  "Pick your goal, upload products, and set prompts. Our AI personalizes every visit in real time."}
+                {currentStep === 2 &&
+                  "Choose the variation that best fits your campaign. You can select one option."}
+                {currentStep === 3 &&
+                  "Review your campaign details and save your configuration."}
               </p>
             </div>
           </div>
@@ -229,18 +253,31 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
                     <label className="text-sm font-medium text-zinc-900">
                       Campaign objective
                     </label>
-                    <Select 
-                      value={formData.campaignObjective} 
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, campaignObjective: value }))}
+                    <Select
+                      value={formData.campaignObjective}
+                      onValueChange={(value) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          campaignObjective: value,
+                        }))
+                      }
                     >
                       <SelectTrigger className="h-9">
                         <SelectValue placeholder="Increase order value" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="increase-order-value">Increase order value</SelectItem>
-                        <SelectItem value="customer-retention">Customer retention</SelectItem>
-                        <SelectItem value="brand-awareness">Brand awareness</SelectItem>
-                        <SelectItem value="lead-generation">Lead generation</SelectItem>
+                        <SelectItem value="increase-order-value">
+                          Increase order value
+                        </SelectItem>
+                        <SelectItem value="customer-retention">
+                          Customer retention
+                        </SelectItem>
+                        <SelectItem value="brand-awareness">
+                          Brand awareness
+                        </SelectItem>
+                        <SelectItem value="lead-generation">
+                          Lead generation
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -266,7 +303,12 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
                     <Textarea
                       placeholder="What is the goal of your campaign?"
                       value={formData.additionalPrompt}
-                      onChange={(e) => setFormData(prev => ({ ...prev, additionalPrompt: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          additionalPrompt: e.target.value,
+                        }))
+                      }
                       className="min-h-[100px] text-sm"
                     />
                   </div>
@@ -275,104 +317,65 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
 
               {currentStep === 2 && (
                 <div className="space-y-4">
-                  {recommendations?.variations ? 
-                    recommendations.variations.map((variation, versionIndex) => (
-                      <div 
-                        key={variation.id}
-                        onClick={() => toggleVersionSelection(versionIndex)}
-                        className={`relative min-h-[300px] bg-white border rounded-lg shadow-sm cursor-pointer transition-all p-6 ${
-                          selectedVersions.includes(versionIndex) 
-                            ? 'border-2 border-blue-600' 
-                            : 'border border-zinc-200 hover:border-zinc-300 hover:shadow-md'
-                        }`}
-                      >
-                        {selectedVersions.includes(versionIndex) && (
-                          <Badge 
-                            className="absolute -top-2 -right-2 bg-blue-600 hover:bg-blue-600 text-white shadow-md"
-                          >
-                            Selected
-                          </Badge>
-                        )}
-                        
-                        <div className="space-y-4">
+                  {recommendations?.variations ? (
+                    recommendations.variations.map(
+                      (variation, versionIndex) => (
+                        <div
+                          key={variation.id}
+                          onClick={() => toggleVersionSelection(versionIndex)}
+                          className={`relative cursor-pointer transition-all p-6 rounded-lg ${
+                            selectedVersions.includes(versionIndex)
+                              ? "border-2 border-primary bg-primary/5"
+                              : "border border-zinc-200 hover:border-zinc-300 hover:shadow-md bg-white"
+                          }`}
+                        >
+                          {selectedVersions.includes(versionIndex) && (
+                            <Badge className="absolute -top-2 -right-2 bg-primary hover:bg-primary text-primary-foreground shadow-md">
+                              Selected
+                            </Badge>
+                          )}
+
                           {/* Header */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <h3 className="text-lg font-semibold text-zinc-900 capitalize">
-                                {variation.widgetType.replace('_', ' ')} Widget
-                              </h3>
-                              <Badge variant="outline" className="text-xs">
-                                {variation.widgetType}
-                              </Badge>
-                            </div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                            Hey User, based on your history I've got some products I think you'll love!
+                          </h3>
+                          
+                          {/* Description with Persuasive Text */}
+                          <p className="text-sm text-gray-600 mb-6">
+                            {variation.text}
+                          </p>
+                          
+                          {/* Products from API */}
+                          <div className="bg-white rounded-lg p-4 border">
+                            {/* Inject CSS from API */}
+                            <style
+                              dangerouslySetInnerHTML={{
+                                __html: variation.css,
+                              }}
+                            />
+                            {/* Inject HTML from API */}
+                            <div
+                              dangerouslySetInnerHTML={{
+                                __html: variation.html,
+                              }}
+                            />
                           </div>
                           
-                          {/* Live Widget Preview */}
-                          <div className="border rounded-lg overflow-hidden bg-white">
-                            <div className="text-xs text-zinc-500 px-4 py-2 bg-gray-50 border-b uppercase tracking-wide">
-                              Live Preview
-                            </div>
-                            <div className="p-4">
-                              <style dangerouslySetInnerHTML={{ __html: variation.css }} />
-                              <div dangerouslySetInnerHTML={{ __html: variation.html }} />
-                            </div>
-                          </div>
-                          
-                          {/* Code Snippets - Collapsible */}
-                          <details className="group">
-                            <summary className="cursor-pointer text-sm font-medium text-zinc-700 hover:text-zinc-900 flex items-center gap-2">
-                              <span className="text-xs">▶</span>
-                              <span>View Code</span>
-                            </summary>
-                            <div className="mt-3 space-y-3">
-                              {/* HTML Code */}
-                              <div className="border rounded-lg p-3 bg-gray-50">
-                                <div className="text-xs text-zinc-500 mb-2 uppercase tracking-wide">HTML</div>
-                                <div 
-                                  className="text-xs bg-white p-3 rounded border max-h-24 overflow-y-auto"
-                                  style={{ fontFamily: 'monospace' }}
-                                >
-                                  {variation.html}
-                                </div>
-                              </div>
-                              
-                              {/* CSS Code */}
-                              <div className="border rounded-lg p-3 bg-gray-50">
-                                <div className="text-xs text-zinc-500 mb-2 uppercase tracking-wide">CSS</div>
-                                <div 
-                                  className="text-xs bg-white p-3 rounded border max-h-24 overflow-y-auto"
-                                  style={{ fontFamily: 'monospace' }}
-                                >
-                                  {variation.css}
-                                </div>
-                              </div>
-                            </div>
-                          </details>
-                          
-                          {/* Persuasive Text */}
-                          <div className="space-y-2">
-                            <div className="text-xs text-zinc-500 uppercase tracking-wide">Persuasive Content</div>
-                            <div className="text-sm text-zinc-600 leading-relaxed">
-                              <div className="line-clamp-4">
-                                {variation.text}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Selection Indicator */}
-                          <div className="pt-2 border-t border-zinc-100">
-                            <span className="text-xs text-zinc-400 italic">
-                              Click to select this {variation.widgetType} widget (replaces current selection)
-                            </span>
+                          {/* Footer */}
+                          <div className="mt-4 text-center">
+                            <p className="text-xs text-gray-400">Blueconic AI can make mistakes. Learn more</p>
                           </div>
                         </div>
-                      </div>
-                    )) : 
+                      )
+                    )
+                  ) : (
                     /* Loading/No data state */
                     <div className="flex items-center justify-center h-64 text-zinc-400">
-                      <p>No variations available. Please complete step 1 first.</p>
+                      <p>
+                        No variations available. Please complete step 1 first.
+                      </p>
                     </div>
-                  }
+                  )}
                 </div>
               )}
 
@@ -388,35 +391,38 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
                       placeholder="Enter campaign name"
                       value={campaignName}
                       onChange={(e) => setCampaignName(e.target.value)}
-                      className="w-full h-9 px-3 py-2 text-sm border border-zinc-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full h-9 px-3 py-2 text-sm border border-zinc-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                     />
                   </div>
 
-                  {/* Selected Variation Summary */}
+                  {/* Selected Variations Summary */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-medium text-zinc-900">
-                      Selected Variation
+                      Selected Variations ({selectedVersions.length})
                     </h3>
                     {selectedVersions.length > 0 ? (
-                      <div className="p-3 bg-zinc-50 rounded-lg">
-                        {(() => {
-                          const variation = recommendations?.variations[selectedVersions[0]]
-                          if (!variation) return null
+                      <div className="space-y-2">
+                        {selectedVersions.map((versionIndex) => {
+                          const variation = recommendations?.variations[versionIndex];
+                          if (!variation) return null;
                           return (
-                            <div className="flex items-center gap-3">
-                              <Badge variant="outline" className="text-xs">
-                                {variation.widgetType}
-                              </Badge>
-                              <span className="text-sm text-zinc-700 capitalize">
-                                {variation.widgetType.replace('_', ' ')} Widget
-                              </span>
+                            <div key={versionIndex} className="p-3 bg-zinc-50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <Badge variant="outline" className="text-xs">
+                                  {variation.widgetType}
+                                </Badge>
+                                <span className="text-sm text-zinc-700 capitalize">
+                                  {variation.widgetType.replace("_", " ")} Widget
+                                </span>
+                              </div>
                             </div>
-                          )
-                        })()}
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-sm text-zinc-500 italic">
-                        No variation selected. Please go back to step 2 to select a variation.
+                        No variations selected. Please go back to step 2 to
+                        select variations.
                       </p>
                     )}
                   </div>
@@ -430,7 +436,7 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-sm text-zinc-500">
-                  Blueconic AI can make mistakes.{' '}
+                  Blueconic AI can make mistakes.{" "}
                   <button className="underline hover:no-underline">
                     Learn more
                   </button>
@@ -438,17 +444,16 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
               </div>
               <div className="flex items-center gap-3">
                 {currentStep > 1 && (
-                  <Button
-                    variant="outline"
-                    onClick={handleBack}
-                  >
+                  <Button variant="outline" onClick={handleBack}>
                     Back
                   </Button>
                 )}
                 {currentStep === 3 ? (
                   <Button
                     onClick={handleSaveAndClose}
-                    disabled={!campaignName.trim() || selectedVersions.length !== 1}
+                    disabled={
+                      !campaignName.trim() || selectedVersions.length === 0
+                    }
                     className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     Save Campaign
@@ -456,10 +461,17 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
                 ) : (
                   <Button
                     onClick={handleNext}
-                    disabled={currentStep >= STEPS.length}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={currentStep >= STEPS.length || isLoading}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:bg-gray-400"
                   >
-                    Next
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      "Next"
+                    )}
                   </Button>
                 )}
               </div>
@@ -468,5 +480,5 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
