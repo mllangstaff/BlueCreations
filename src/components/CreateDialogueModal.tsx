@@ -14,11 +14,29 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { FileSpreadsheet, Copy } from 'lucide-react'
+import { FileSpreadsheet } from 'lucide-react'
 
 interface CreateDialogueModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+interface Variation {
+  id: string
+  widgetType: string
+  html: string
+  css: string
+  text: string
+}
+
+interface RecommendationsResponse {
+  success: boolean
+  variations: Variation[]
+  campaignObjective: string
+  productCount: number
+  category: string
+  availableCategories: string[]
+  generatedAt: string
 }
 
 const STEPS = [
@@ -34,10 +52,38 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
     productList: 'Allproducts.csv',
     additionalPrompt: ''
   })
+  const [campaignName, setCampaignName] = useState('')
   const [selectedVersions, setSelectedVersions] = useState<number[]>([]) // User can select none or multiple
+  const [recommendations, setRecommendations] = useState<RecommendationsResponse | null>(null)
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < STEPS.length) {
+      if (currentStep === 1) {
+        try {
+          const response = await fetch('http://localhost:3000/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              campaignObjective: formData.campaignObjective,
+              productList: formData.productList,
+              additionalPrompt: formData.additionalPrompt
+            })
+          })
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+          
+          const recommendationsData = await response.json()
+          console.log('Received recommendations:', recommendationsData)
+          setRecommendations(recommendationsData)
+        } catch (error) {
+          console.error('Error generating recommendations:', error)
+          // You might want to show an error message to the user here
+        }
+      }
       setCurrentStep(currentStep + 1)
     }
   }
@@ -48,31 +94,78 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
     }
   }
 
-  const handleSaveAndClose = () => {
+  const handleSaveAndClose = async () => {
+    // If on step 3, save the selected variations to backend
+    if (currentStep === 3 && recommendations && selectedVersions.length > 0) {
+      try {
+        // Get the first selected variation (API expects single variation)
+        const firstSelectedIndex = selectedVersions[0]
+        const selectedVariation = recommendations.variations[firstSelectedIndex]
+        
+        const saveData = {
+          campaignName: campaignName,
+          campaignObjective: formData.campaignObjective,
+          variation: {
+            widgetType: selectedVariation.widgetType,
+            html: selectedVariation.html,
+            css: selectedVariation.css,
+            text: selectedVariation.text
+          },
+          category: "all", // Default as specified in API
+          additionalPrompt: formData.additionalPrompt || undefined,
+          notes: undefined // Optional field, can be added later
+        }
+
+        console.log('Saving campaign with variation:', {
+          campaignName,
+          widgetType: selectedVariation.widgetType,
+          htmlLength: selectedVariation.html.length,
+          cssLength: selectedVariation.css.length,
+          textLength: selectedVariation.text.length
+        })
+
+        const response = await fetch('http://localhost:3000/save-campaign', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(saveData)
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const result = await response.json()
+        console.log('Campaign saved successfully:', result)
+        // You could show a success message here
+        
+      } catch (error) {
+        console.error('Error saving campaign:', error)
+        // You could show an error message here
+        return // Don't close modal if save failed
+      }
+    }
+    
+    // Close modal and reset
     onOpenChange(false)
     setCurrentStep(1)
+    setSelectedVersions([])
+    setRecommendations(null)
+    setCampaignName('')
   }
 
   const toggleVersionSelection = (versionIndex: number) => {
     setSelectedVersions(prev => 
       prev.includes(versionIndex)
-        ? prev.filter(index => index !== versionIndex)
-        : [...prev, versionIndex]
+        ? [] // Deselect if clicking the same one
+        : [versionIndex] // Select only this one (single selection)
     )
   }
 
-  const codeSnippet = `<iframe src="https://VWHAM.ai/c/2rF5KEXRnon0" class="formless-embed" width="100%" height="600px" loading="lazy" style="border: 0; display: block"></iframe>
 
-<script src="https://embed.VWHAM.ai/embed.js" async></script>`
 
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(codeSnippet)
-      // Could add a toast notification here in the future
-    } catch (err) {
-      console.error('Failed to copy code:', err)
-    }
-  }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,8 +213,8 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
               </h2>
               <p className="text-sm text-zinc-500">
                 {currentStep === 1 && "Pick your goal, upload products, and set prompts. Our AI personalizes every visit in real time."}
-                {currentStep === 2 && "Your selections will help tune the output for users. You can select as many options as you like"}
-                {currentStep === 3 && "Copy and paste this code into your application"}
+                {currentStep === 2 && "Choose the variation that best fits your campaign. You can select one option."}
+                {currentStep === 3 && "Review your campaign details and save your configuration."}
               </p>
             </div>
           </div>
@@ -182,35 +275,151 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
 
               {currentStep === 2 && (
                 <div className="space-y-4">
-                  {[0, 1, 2, 3, 4].map((versionIndex) => (
-                    <div 
-                      key={versionIndex}
-                      onClick={() => toggleVersionSelection(versionIndex)}
-                      className={`relative h-[300px] bg-zinc-100 rounded-lg shadow-sm cursor-pointer transition-all ${
-                        selectedVersions.includes(versionIndex) 
-                          ? 'border-2 border-blue-600' 
-                          : 'border border-transparent hover:border-zinc-300'
-                      }`}
-                    >
-                      {selectedVersions.includes(versionIndex) && (
-                        <Badge 
-                          className="absolute -top-2 -right-2 bg-blue-600 hover:bg-blue-600 text-white shadow-md"
-                        >
-                          Selected
-                        </Badge>
-                      )}
-                      {/* Placeholder content - this would be populated from backend */}
-                      <div className="flex items-center justify-center h-full text-zinc-400">
-                        <p>Version {versionIndex + 1} Preview</p>
+                  {recommendations?.variations ? 
+                    recommendations.variations.map((variation, versionIndex) => (
+                      <div 
+                        key={variation.id}
+                        onClick={() => toggleVersionSelection(versionIndex)}
+                        className={`relative min-h-[300px] bg-white border rounded-lg shadow-sm cursor-pointer transition-all p-6 ${
+                          selectedVersions.includes(versionIndex) 
+                            ? 'border-2 border-blue-600' 
+                            : 'border border-zinc-200 hover:border-zinc-300 hover:shadow-md'
+                        }`}
+                      >
+                        {selectedVersions.includes(versionIndex) && (
+                          <Badge 
+                            className="absolute -top-2 -right-2 bg-blue-600 hover:bg-blue-600 text-white shadow-md"
+                          >
+                            Selected
+                          </Badge>
+                        )}
+                        
+                        <div className="space-y-4">
+                          {/* Header */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <h3 className="text-lg font-semibold text-zinc-900 capitalize">
+                                {variation.widgetType.replace('_', ' ')} Widget
+                              </h3>
+                              <Badge variant="outline" className="text-xs">
+                                {variation.widgetType}
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          {/* Live Widget Preview */}
+                          <div className="border rounded-lg overflow-hidden bg-white">
+                            <div className="text-xs text-zinc-500 px-4 py-2 bg-gray-50 border-b uppercase tracking-wide">
+                              Live Preview
+                            </div>
+                            <div className="p-4">
+                              <style dangerouslySetInnerHTML={{ __html: variation.css }} />
+                              <div dangerouslySetInnerHTML={{ __html: variation.html }} />
+                            </div>
+                          </div>
+                          
+                          {/* Code Snippets - Collapsible */}
+                          <details className="group">
+                            <summary className="cursor-pointer text-sm font-medium text-zinc-700 hover:text-zinc-900 flex items-center gap-2">
+                              <span className="text-xs">▶</span>
+                              <span>View Code</span>
+                            </summary>
+                            <div className="mt-3 space-y-3">
+                              {/* HTML Code */}
+                              <div className="border rounded-lg p-3 bg-gray-50">
+                                <div className="text-xs text-zinc-500 mb-2 uppercase tracking-wide">HTML</div>
+                                <div 
+                                  className="text-xs bg-white p-3 rounded border max-h-24 overflow-y-auto"
+                                  style={{ fontFamily: 'monospace' }}
+                                >
+                                  {variation.html}
+                                </div>
+                              </div>
+                              
+                              {/* CSS Code */}
+                              <div className="border rounded-lg p-3 bg-gray-50">
+                                <div className="text-xs text-zinc-500 mb-2 uppercase tracking-wide">CSS</div>
+                                <div 
+                                  className="text-xs bg-white p-3 rounded border max-h-24 overflow-y-auto"
+                                  style={{ fontFamily: 'monospace' }}
+                                >
+                                  {variation.css}
+                                </div>
+                              </div>
+                            </div>
+                          </details>
+                          
+                          {/* Persuasive Text */}
+                          <div className="space-y-2">
+                            <div className="text-xs text-zinc-500 uppercase tracking-wide">Persuasive Content</div>
+                            <div className="text-sm text-zinc-600 leading-relaxed">
+                              <div className="line-clamp-4">
+                                {variation.text}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Selection Indicator */}
+                          <div className="pt-2 border-t border-zinc-100">
+                            <span className="text-xs text-zinc-400 italic">
+                              Click to select this {variation.widgetType} widget (replaces current selection)
+                            </span>
+                          </div>
+                        </div>
                       </div>
+                    )) : 
+                    /* Loading/No data state */
+                    <div className="flex items-center justify-center h-64 text-zinc-400">
+                      <p>No variations available. Please complete step 1 first.</p>
                     </div>
-                  ))}
+                  }
                 </div>
               )}
 
               {currentStep === 3 && (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-zinc-500">Code snippet step content coming soon...</p>
+                <div className="space-y-6">
+                  {/* Campaign Name */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-900">
+                      Campaign name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter campaign name"
+                      value={campaignName}
+                      onChange={(e) => setCampaignName(e.target.value)}
+                      className="w-full h-9 px-3 py-2 text-sm border border-zinc-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Selected Variation Summary */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-zinc-900">
+                      Selected Variation
+                    </h3>
+                    {selectedVersions.length > 0 ? (
+                      <div className="p-3 bg-zinc-50 rounded-lg">
+                        {(() => {
+                          const variation = recommendations?.variations[selectedVersions[0]]
+                          if (!variation) return null
+                          return (
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline" className="text-xs">
+                                {variation.widgetType}
+                              </Badge>
+                              <span className="text-sm text-zinc-700 capitalize">
+                                {variation.widgetType.replace('_', ' ')} Widget
+                              </span>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-zinc-500 italic">
+                        No variation selected. Please go back to step 2 to select a variation.
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -236,13 +445,23 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
                     Back
                   </Button>
                 )}
-                <Button
-                  onClick={handleNext}
-                  disabled={currentStep >= STEPS.length}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Next
-                </Button>
+                {currentStep === 3 ? (
+                  <Button
+                    onClick={handleSaveAndClose}
+                    disabled={!campaignName.trim() || selectedVersions.length !== 1}
+                    className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Save Campaign
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleNext}
+                    disabled={currentStep >= STEPS.length}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Next
+                  </Button>
+                )}
               </div>
             </div>
           </div>

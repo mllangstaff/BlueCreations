@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
@@ -15,15 +15,41 @@ import {
   MoreVertical
 } from 'lucide-react'
 
-// Mock dialogue data
-const mockDialogues = [
-  { id: '1', title: 'My New Dialogue', editedAt: '1 day ago' },
-  { id: '2', title: 'My New Dialogue (2)', editedAt: '4 days ago' },
-  { id: '3', title: 'My New Dialogue (3)', editedAt: '5 days ago' },
-  { id: '4', title: 'My New Dialogue (4)', editedAt: '1 day ago' },
-  { id: '5', title: 'My New Dialogue (5)', editedAt: '4 days ago' },
-  { id: '6', title: 'My New Dialogue (6)', editedAt: '5 days ago' }
-]
+// Campaign interface
+interface Campaign {
+  id: string
+  name: string
+  objective: string
+  variation: {
+    widgetType: string
+    html: string
+    css: string
+    text: string
+  }
+  category?: string
+  additionalPrompt?: string
+  notes?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+// API Response interface
+interface CampaignsResponse {
+  success: boolean
+  campaigns: Campaign[]
+  pagination: {
+    total: number
+    limit: number
+    offset: number
+    page: number
+    totalPages: number
+    hasMore: boolean
+  }
+  filters: {
+    category: string
+    search: string | null
+  }
+}
 
 function Sidebar() {
   return (
@@ -113,7 +139,23 @@ function FilterTabs() {
   )
 }
 
-function DialogueCard({ dialogue }: { dialogue: typeof mockDialogues[0] }) {
+// Helper function to format relative time
+function getRelativeTime(dateString?: string) {
+  if (!dateString) return 'Unknown'
+  
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return '1 day ago'
+  if (diffDays < 7) return `${diffDays} days ago`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+  return `${Math.floor(diffDays / 30)} months ago`
+}
+
+function DialogueCard({ campaign }: { campaign: Campaign }) {
   return (
     <Card className="overflow-hidden">
       {/* Placeholder image area */}
@@ -123,10 +165,13 @@ function DialogueCard({ dialogue }: { dialogue: typeof mockDialogues[0] }) {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-base text-card-foreground truncate">
-              {dialogue.title}
+              {campaign.name}
             </h3>
-            <p className="text-sm text-muted-foreground mt-1.5">
-              Edited {dialogue.editedAt}
+            <p className="text-sm text-muted-foreground mt-1">
+              {campaign.variation.widgetType.replace('_', ' ')} • {campaign.objective.replace('-', ' ')}
+            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Updated {getRelativeTime(campaign.updatedAt || campaign.createdAt)}
             </p>
           </div>
           <Button variant="ghost" size="sm" className="p-1 h-6 w-6 shrink-0">
@@ -140,9 +185,67 @@ function DialogueCard({ dialogue }: { dialogue: typeof mockDialogues[0] }) {
 
 export default function Dashboard() {
   const [isCreateDialogueModalOpen, setIsCreateDialogueModalOpen] = useState(false)
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
+  // Fetch campaigns from API
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        const response = await fetch('http://localhost:3000/campaigns')
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const data: CampaignsResponse = await response.json()
+        console.log('Fetched campaigns:', data)
+        
+        if (data.success && data.campaigns) {
+          setCampaigns(data.campaigns)
+        } else {
+          throw new Error('Invalid response format')
+        }
+      } catch (err) {
+        console.error('Error fetching campaigns:', err)
+        setError(err instanceof Error ? err.message : 'Failed to fetch campaigns')
+        setCampaigns([]) // Reset to empty array on error
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchCampaigns()
+  }, [])
+
+  // Refetch campaigns when a new campaign is created
   const handleCreateDialogue = () => {
     setIsCreateDialogueModalOpen(true)
+  }
+
+  const handleModalClose = (open: boolean) => {
+    setIsCreateDialogueModalOpen(open)
+    // Refetch campaigns when modal closes (in case a new campaign was saved)
+    if (!open) {
+      const refetchCampaigns = async () => {
+        try {
+          const response = await fetch('http://localhost:3000/campaigns')
+          if (response.ok) {
+            const data: CampaignsResponse = await response.json()
+            if (data.success && data.campaigns) {
+              setCampaigns(data.campaigns)
+            }
+          }
+        } catch (err) {
+          console.error('Error refetching campaigns:', err)
+        }
+      }
+      refetchCampaigns()
+    }
   }
 
   return (
@@ -161,21 +264,27 @@ export default function Dashboard() {
             {/* Filter Controls */}
             <FilterTabs />
             
-            {/* Dialogue Cards Grid */}
+            {/* Campaign Cards Grid */}
             <div className="space-y-4">
-              {/* First row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {mockDialogues.slice(0, 3).map((dialogue) => (
-                  <DialogueCard key={dialogue.id} dialogue={dialogue} />
-                ))}
-              </div>
-              
-              {/* Second row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {mockDialogues.slice(3, 6).map((dialogue) => (
-                  <DialogueCard key={dialogue.id} dialogue={dialogue} />
-                ))}
-              </div>
+              {isLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <p className="text-muted-foreground">Loading campaigns...</p>
+                </div>
+              ) : error ? (
+                <div className="flex items-center justify-center h-64">
+                  <p className="text-red-500">Error: {error}</p>
+                </div>
+              ) : campaigns.length === 0 ? (
+                <div className="flex items-center justify-center h-64">
+                  <p className="text-muted-foreground">No campaigns found. Create your first campaign!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {campaigns.map((campaign) => (
+                    <DialogueCard key={campaign.id} campaign={campaign} />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -184,7 +293,7 @@ export default function Dashboard() {
       {/* Create Dialogue Modal */}
       <CreateDialogueModal
         open={isCreateDialogueModalOpen}
-        onOpenChange={setIsCreateDialogueModalOpen}
+        onOpenChange={handleModalClose}
       />
     </div>
   )
