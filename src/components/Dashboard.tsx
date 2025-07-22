@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import CreateDialogueModal from './CreateDialogueModal'
 import {
   LayoutGrid,
   BarChart3,
@@ -69,7 +71,7 @@ function Sidebar() {
   )
 }
 
-function Header() {
+function Header({ onCreateDialogue }: { onCreateDialogue: () => void }) {
   return (
     <div className="h-16 border-b border-border bg-background">
       <div className="flex items-center justify-between h-full px-4">
@@ -80,7 +82,10 @@ function Header() {
           <Separator orientation="vertical" className="h-4" />
           <span className="text-sm font-normal text-foreground">Dashboard</span>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button 
+          onClick={onCreateDialogue}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Create Dialogue
         </Button>
@@ -134,6 +139,12 @@ function DialogueCard({ dialogue }: { dialogue: typeof mockDialogues[0] }) {
 }
 
 export default function Dashboard() {
+  const [isCreateDialogueModalOpen, setIsCreateDialogueModalOpen] = useState(false)
+
+  const handleCreateDialogue = () => {
+    setIsCreateDialogueModalOpen(true)
+  }
+
   return (
     <div className="flex h-screen bg-background border border-border">
       {/* Sidebar */}
@@ -142,7 +153,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <Header />
+        <Header onCreateDialogue={handleCreateDialogue} />
         
         {/* Content Area */}
         <div className="flex-1 overflow-auto">
@@ -169,6 +180,12 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Create Dialogue Modal */}
+      <CreateDialogueModal
+        open={isCreateDialogueModalOpen}
+        onOpenChange={setIsCreateDialogueModalOpen}
+      />
     </div>
   )
 }
