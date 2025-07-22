@@ -178,7 +178,7 @@ function DialogueCard({ dialogue }: { dialogue: typeof mockDialogues[0] }) {
       <div className="aspect-[3/2] bg-muted" />
       
       <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-base text-card-foreground truncate">
               {dialogue.title}
