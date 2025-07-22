@@ -60,8 +60,20 @@ export default function CreateDialogueModal({
   const [iframeCode, setIframeCode] = useState<string>("");
   const [isGeneratingIframe, setIsGeneratingIframe] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [showCampaignNamingDialog, setShowCampaignNamingDialog] = useState(false);
-  const [tempCampaignName, setTempCampaignName] = useState("");
+
+  // Function to auto-generate campaign name based on objective
+  const generateCampaignName = (objective: string) => {
+    const objectiveMap: { [key: string]: string } = {
+      "increase-order-value": "Boost Sales Campaign",
+      "customer-retention": "Loyalty Builder Campaign", 
+      "brand-awareness": "Brand Discovery Campaign",
+      "lead-generation": "Lead Capture Campaign"
+    };
+    
+    const baseName = objectiveMap[objective] || "Personalization Campaign";
+    const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    return `${baseName} - ${timestamp}`;
+  };
 
   const handleNext = async () => {
     if (currentStep < STEPS.length) {
@@ -100,13 +112,19 @@ export default function CreateDialogueModal({
           setIsLoading(false);
         }
       } else if (currentStep === 2) {
-        // Show campaign naming dialog before moving to Step 3
+        // Auto-generate campaign name and move to Step 3
         if (selectedVersions.length > 0) {
-          setTempCampaignName(campaignName || "");
-          setShowCampaignNamingDialog(true);
-        } else {
-          setCurrentStep(currentStep + 1);
+          const generatedName = generateCampaignName(formData.campaignObjective);
+          setCampaignName(generatedName);
+          
+          // Generate iframe code with the auto-generated campaign name
+          if (recommendations) {
+            setIsGeneratingIframe(true);
+            await generateIframeCode(generatedName);
+            setIsGeneratingIframe(false);
+          }
         }
+        setCurrentStep(currentStep + 1);
       } else {
         // For other steps, advance immediately
         setCurrentStep(currentStep + 1);
@@ -114,8 +132,9 @@ export default function CreateDialogueModal({
     }
   };
 
-  const generateIframeCode = async () => {
-    setIsGeneratingIframe(true);
+  const generateIframeCode = async (nameToUse?: string) => {
+    const currentCampaignName = nameToUse || campaignName;
+    
     try {
       const selectedVariationIds = selectedVersions.map(
         (index) => recommendations!.variations[index].id
@@ -129,7 +148,7 @@ export default function CreateDialogueModal({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            campaignName: campaignName,
+            campaignName: currentCampaignName,
             campaignObjective: formData.campaignObjective,
             selectedVariationIds: selectedVariationIds,
             additionalPrompt: formData.additionalPrompt,
@@ -146,26 +165,10 @@ export default function CreateDialogueModal({
       setIframeCode(data.iframeCode || "");
     } catch (error) {
       console.error("Error generating iframe code:", error);
-      // Fallback iframe code if API fails
+      // Clean single-line iframe code like Jebbit
       const campaignId = Math.random().toString(36).substr(2, 9);
-      const campaignSlug = campaignName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-      setIframeCode(`<iframe 
-  src="https://your-domain.com/widget/${campaignSlug}-${campaignId}" 
-  data-campaign="${campaignName}"
-  width="100%" 
-  height="400" 
-  frameborder="0">
-</iframe>
-
-<script>
-  // ${campaignName} - Launch Script
-  window.BlueconicConfig = {
-    campaign: "${campaignName}",
-    campaignId: "${campaignSlug}-${campaignId}"
-  };
-</script>`);
-    } finally {
-      setIsGeneratingIframe(false);
+      const campaignSlug = currentCampaignName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      setIframeCode(`<iframe class="bluecreations-frame" src="https://app.bluecreations.ai/${campaignSlug}?c=${campaignId}&obj=${formData.campaignObjective}&deferred=true" seamless="true" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="width:100%;min-height:600px;" onload="function embedBlueCreations(){function e(){var e='attach'===t?window.addEventListener:window.removeEventListener;e('DOMContentLoaded',i,!1),e('load',i,!1),e('scroll',i,!1),e('resize',i,!1)}var n=document.querySelector('.bluecreations-frame');function i(){(function(){var e=n.getBoundingClientRect(),t=n.clientHeight/2,i=n.clientWidth/2;return e.top>=0&&e.left>=0&&e.top<=(window.innerHeight||document.documentElement.clientHeight)-t&&e.left<=(window.innerWidth||document.documentElement.clientWidth)-i})(n)&&n.contentWindow.postMessage('startBlueCreationsCampaign','*')}window.addEventListener('message',function(){t&&('blueCreationsLoaded'===t.data?e('remove'):'blueCreationsCampaignLoaded'===t.data&&(window.location.href=t.data.options.link))},!1),e('attach')}embedBlueCreations('.bluecreations-frame');"></iframe>`);
     }
   };
 
@@ -179,25 +182,6 @@ export default function CreateDialogueModal({
     }
   };
 
-  const handleCampaignNameConfirm = async () => {
-    if (tempCampaignName.trim()) {
-      setCampaignName(tempCampaignName.trim());
-      setShowCampaignNamingDialog(false);
-      
-      // Generate iframe code with the campaign name
-      if (selectedVersions.length > 0 && recommendations) {
-        await generateIframeCode();
-      }
-      
-      // Move to Step 3
-      setCurrentStep(3);
-    }
-  };
-
-  const handleCampaignNameCancel = () => {
-    setShowCampaignNamingDialog(false);
-    setTempCampaignName("");
-  };
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -275,8 +259,6 @@ export default function CreateDialogueModal({
     setCampaignName("");
     setIframeCode("");
     setIsCopied(false);
-    setShowCampaignNamingDialog(false);
-    setTempCampaignName("");
   };
 
   const toggleVersionSelection = (versionIndex: number) => {
@@ -498,15 +480,17 @@ export default function CreateDialogueModal({
                               </div>
                             </div>
                           ) : iframeCode ? (
-                            <div className="font-mono text-sm text-white/40 leading-5">
-                              <pre className="whitespace-pre-wrap">
+                            <div className="font-mono text-sm text-white/40 leading-5 overflow-x-auto">
+                              <pre className="whitespace-pre overflow-x-auto min-w-full">
                                 <code 
+                                  className="block text-left break-all"
+                                  style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
                                   dangerouslySetInnerHTML={{ 
                                     __html: iframeCode
                                       .replace(/</g, '&lt;')
                                       .replace(/>/g, '&gt;')
                                       .replace(/(&lt;)(\/?)(iframe|script)(\s|&gt;)/g, '$1<span class="text-blue-400/60">$2$3</span>$4')
-                                      .replace(/(src|width|height|loading|style|async|class|frameborder)/g, '<span class="text-blue-400">$1</span>')
+                                      .replace(/(src|width|height|loading|style|async|class|frameborder|seamless|webkitallowfullscreen|mozallowfullscreen|allowfullscreen|onload)/g, '<span class="text-blue-400">$1</span>')
                                       .replace(/=("[^"]*")/g, '=<span class="text-orange-300">$1</span>')
                                   }} 
                                 />
@@ -587,63 +571,6 @@ export default function CreateDialogueModal({
         </div>
       </DialogContent>
 
-      {/* Campaign Naming Dialog */}
-      {showCampaignNamingDialog && (
-        <Dialog open={showCampaignNamingDialog} onOpenChange={setShowCampaignNamingDialog}>
-          <DialogOverlay className="bg-black/50 backdrop-blur-sm" />
-          <DialogContent className="max-w-md p-6 bg-white rounded-lg shadow-lg">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-zinc-900">
-                  Name your campaign
-                </h3>
-                <p className="text-sm text-zinc-500">
-                  Give your campaign a memorable name that will be included in the embed script.
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-900">
-                  Campaign name
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter campaign name"
-                  value={tempCampaignName}
-                  onChange={(e) => setTempCampaignName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && tempCampaignName.trim()) {
-                      handleCampaignNameConfirm();
-                    }
-                  }}
-                  className="w-full h-9 px-3 py-2 text-sm border border-zinc-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                  autoFocus
-                />
-              </div>
-              
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <Button variant="outline" onClick={handleCampaignNameCancel}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCampaignNameConfirm}
-                  disabled={!tempCampaignName.trim() || isGeneratingIframe}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  {isGeneratingIframe ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Continue"
-                  )}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </Dialog>
   );
 }
