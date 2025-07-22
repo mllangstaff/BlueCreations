@@ -10,7 +10,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileSpreadsheet, Loader2 } from "lucide-react";
+import { FileSpreadsheet, Loader2, Copy, Check } from "lucide-react";
+import { CodeBlock, dracula } from "react-code-blocks";
 
 interface CreateDialogueModalProps {
   open: boolean;
@@ -56,6 +57,11 @@ export default function CreateDialogueModal({
   const [recommendations, setRecommendations] =
     useState<RecommendationsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [iframeCode, setIframeCode] = useState<string>("");
+  const [isGeneratingIframe, setIsGeneratingIframe] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [showCampaignNamingDialog, setShowCampaignNamingDialog] = useState(false);
+  const [tempCampaignName, setTempCampaignName] = useState("");
 
   const handleNext = async () => {
     if (currentStep < STEPS.length) {
@@ -93,11 +99,104 @@ export default function CreateDialogueModal({
         } finally {
           setIsLoading(false);
         }
+      } else if (currentStep === 2) {
+        // Show campaign naming dialog before moving to Step 3
+        if (selectedVersions.length > 0) {
+          setTempCampaignName(campaignName || "");
+          setShowCampaignNamingDialog(true);
+        } else {
+          setCurrentStep(currentStep + 1);
+        }
       } else {
         // For other steps, advance immediately
         setCurrentStep(currentStep + 1);
       }
     }
+  };
+
+  const generateIframeCode = async () => {
+    setIsGeneratingIframe(true);
+    try {
+      const selectedVariationIds = selectedVersions.map(
+        (index) => recommendations!.variations[index].id
+      );
+
+      const response = await fetch(
+        "http://localhost:3000/backoffice/generate-iframe",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            campaignName: campaignName,
+            campaignObjective: formData.campaignObjective,
+            selectedVariationIds: selectedVariationIds,
+            additionalPrompt: formData.additionalPrompt,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Generated iframe code:", data);
+      setIframeCode(data.iframeCode || "");
+    } catch (error) {
+      console.error("Error generating iframe code:", error);
+      // Fallback iframe code if API fails
+      const campaignId = Math.random().toString(36).substr(2, 9);
+      const campaignSlug = campaignName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      setIframeCode(`<iframe 
+  src="https://your-domain.com/widget/${campaignSlug}-${campaignId}" 
+  data-campaign="${campaignName}"
+  width="100%" 
+  height="400" 
+  frameborder="0">
+</iframe>
+
+<script>
+  // ${campaignName} - Launch Script
+  window.BlueconicConfig = {
+    campaign: "${campaignName}",
+    campaignId: "${campaignSlug}-${campaignId}"
+  };
+</script>`);
+    } finally {
+      setIsGeneratingIframe(false);
+    }
+  };
+
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(iframeCode);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy code:", error);
+    }
+  };
+
+  const handleCampaignNameConfirm = async () => {
+    if (tempCampaignName.trim()) {
+      setCampaignName(tempCampaignName.trim());
+      setShowCampaignNamingDialog(false);
+      
+      // Generate iframe code with the campaign name
+      if (selectedVersions.length > 0 && recommendations) {
+        await generateIframeCode();
+      }
+      
+      // Move to Step 3
+      setCurrentStep(3);
+    }
+  };
+
+  const handleCampaignNameCancel = () => {
+    setShowCampaignNamingDialog(false);
+    setTempCampaignName("");
   };
 
   const handleBack = () => {
@@ -174,6 +273,10 @@ export default function CreateDialogueModal({
     setSelectedVersions([]);
     setRecommendations(null);
     setCampaignName("");
+    setIframeCode("");
+    setIsCopied(false);
+    setShowCampaignNamingDialog(false);
+    setTempCampaignName("");
   };
 
   const toggleVersionSelection = (versionIndex: number) => {
@@ -236,9 +339,9 @@ export default function CreateDialogueModal({
                 {currentStep === 1 &&
                   "Pick your goal, upload products, and set prompts. Our AI personalizes every visit in real time."}
                 {currentStep === 2 &&
-                  "Choose the variation that best fits your campaign. You can select one option."}
+                  "Choose the variation that best fits your campaign. You can select multiple options."}
                 {currentStep === 3 &&
-                  "Review your campaign details and save your configuration."}
+                  "Copy the code below and paste it into any <div> on your site where you want the Dialogue to appear."}
               </p>
             </div>
           </div>
@@ -380,51 +483,55 @@ export default function CreateDialogueModal({
               )}
 
               {currentStep === 3 && (
-                <div className="space-y-6">
-                  {/* Campaign Name */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-900">
-                      Campaign name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter campaign name"
-                      value={campaignName}
-                      onChange={(e) => setCampaignName(e.target.value)}
-                      className="w-full h-9 px-3 py-2 text-sm border border-zinc-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                    />
-                  </div>
-
-                  {/* Selected Variations Summary */}
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium text-zinc-900">
-                      Selected Variations ({selectedVersions.length})
-                    </h3>
-                    {selectedVersions.length > 0 ? (
-                      <div className="space-y-2">
-                        {selectedVersions.map((versionIndex) => {
-                          const variation = recommendations?.variations[versionIndex];
-                          if (!variation) return null;
-                          return (
-                            <div key={versionIndex} className="p-3 bg-zinc-50 rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <Badge variant="outline" className="text-xs">
-                                  {variation.widgetType}
-                                </Badge>
-                                <span className="text-sm text-zinc-700 capitalize">
-                                  {variation.widgetType.replace("_", " ")} Widget
-                                </span>
+                <div className="flex flex-col h-full">
+                  {/* Content Section */}
+                  <div className="flex-1 px-6 py-6">
+                    <div className="space-y-6">
+                      {/* Code Block Section */}
+                      <div className="rounded-lg border border-primary overflow-hidden">
+                        <div className="bg-[#1c1c1c] p-5">
+                          {isGeneratingIframe ? (
+                            <div className="flex items-center justify-center h-32">
+                              <div className="flex items-center gap-2 text-zinc-400">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Generating embed code...
                               </div>
                             </div>
-                          );
-                        })}
+                          ) : iframeCode ? (
+                            <div className="font-mono text-sm text-white/40 leading-5">
+                              <pre className="whitespace-pre-wrap">
+                                <code 
+                                  dangerouslySetInnerHTML={{ 
+                                    __html: iframeCode
+                                      .replace(/</g, '&lt;')
+                                      .replace(/>/g, '&gt;')
+                                      .replace(/(&lt;)(\/?)(iframe|script)(\s|&gt;)/g, '$1<span class="text-blue-400/60">$2$3</span>$4')
+                                      .replace(/(src|width|height|loading|style|async|class|frameborder)/g, '<span class="text-blue-400">$1</span>')
+                                      .replace(/=("[^"]*")/g, '=<span class="text-orange-300">$1</span>')
+                                  }} 
+                                />
+                              </pre>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center h-32">
+                              <p className="text-zinc-400 text-sm">
+                                No embed code generated yet
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Copy Button */}
+                        <Button
+                          onClick={handleCopyCode}
+                          disabled={!iframeCode || isGeneratingIframe}
+                          className="w-full h-9 bg-primary hover:bg-primary/90 text-white rounded-none rounded-b-lg shadow-sm"
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          {isCopied ? "Copied!" : "Copy Code"}
+                        </Button>
                       </div>
-                    ) : (
-                      <p className="text-sm text-zinc-500 italic">
-                        No variations selected. Please go back to step 2 to
-                        select variations.
-                      </p>
-                    )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -454,20 +561,20 @@ export default function CreateDialogueModal({
                     disabled={
                       !campaignName.trim() || selectedVersions.length === 0
                     }
-                    className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
-                    Save Campaign
+                    Publish
                   </Button>
                 ) : (
                   <Button
                     onClick={handleNext}
-                    disabled={currentStep >= STEPS.length || isLoading}
+                    disabled={currentStep >= STEPS.length || isLoading || (currentStep === 2 && isGeneratingIframe)}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:bg-gray-400"
                   >
-                    {isLoading ? (
+                    {isLoading || (currentStep === 2 && isGeneratingIframe) ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Loading...
+                        {currentStep === 2 ? "Generating..." : "Loading..."}
                       </>
                     ) : (
                       "Next"
@@ -479,6 +586,64 @@ export default function CreateDialogueModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* Campaign Naming Dialog */}
+      {showCampaignNamingDialog && (
+        <Dialog open={showCampaignNamingDialog} onOpenChange={setShowCampaignNamingDialog}>
+          <DialogOverlay className="bg-black/50 backdrop-blur-sm" />
+          <DialogContent className="max-w-md p-6 bg-white rounded-lg shadow-lg">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-zinc-900">
+                  Name your campaign
+                </h3>
+                <p className="text-sm text-zinc-500">
+                  Give your campaign a memorable name that will be included in the embed script.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-900">
+                  Campaign name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter campaign name"
+                  value={tempCampaignName}
+                  onChange={(e) => setTempCampaignName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && tempCampaignName.trim()) {
+                      handleCampaignNameConfirm();
+                    }
+                  }}
+                  className="w-full h-9 px-3 py-2 text-sm border border-zinc-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={handleCampaignNameCancel}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCampaignNameConfirm}
+                  disabled={!tempCampaignName.trim() || isGeneratingIframe}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  {isGeneratingIframe ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Continue"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   );
 }
