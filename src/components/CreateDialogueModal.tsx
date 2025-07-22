@@ -89,9 +89,9 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
                 <div 
                   className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm font-medium ${
                     step.number === currentStep
-                      ? 'bg-white border-blue-600 text-blue-600'
+                      ? 'bg-white border-primary text-primary'
                       : step.number < currentStep
-                      ? 'bg-blue-600 border-blue-600 text-white'
+                      ? 'bg-primary border-primary text-primary-foreground'
                       : 'bg-white border-zinc-200 text-zinc-900'
                   }`}
                 >
@@ -104,7 +104,7 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
           
           <button 
             onClick={handleSaveAndClose}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 text-left"
+            className="text-sm font-medium text-primary hover:text-primary/80 text-left"
           >
             Save & close
           </button>
@@ -188,13 +188,13 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
                       onClick={() => toggleVersionSelection(versionIndex)}
                       className={`relative h-[300px] bg-zinc-100 rounded-lg shadow-sm cursor-pointer transition-all ${
                         selectedVersions.includes(versionIndex) 
-                          ? 'border-2 border-blue-600' 
+                          ? 'border-2 border-primary' 
                           : 'border border-transparent hover:border-zinc-300'
                       }`}
                     >
                       {selectedVersions.includes(versionIndex) && (
                         <Badge 
-                          className="absolute -top-2 -right-2 bg-blue-600 hover:bg-blue-600 text-white shadow-md"
+                          className="absolute -top-2 -right-2 bg-primary hover:bg-primary text-primary-foreground shadow-md"
                         >
                           Selected
                         </Badge>
@@ -239,7 +239,7 @@ export default function CreateDialogueModal({ open, onOpenChange }: CreateDialog
                 <Button
                   onClick={handleNext}
                   disabled={currentStep >= STEPS.length}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   Next
                 </Button>

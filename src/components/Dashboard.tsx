@@ -47,7 +47,7 @@ function AppSidebar({ currentPage, onNavigate }: { currentPage: string; onNaviga
   return (
     <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader>
-        <div className="w-8 h-8 bg-[#355df9] rounded-lg flex items-center justify-center">
+        <div className="w-8 h-8 bg-[#FF8921] rounded-lg flex items-center justify-center">
           <img src={GroupIcon} alt="Group" className="w-5 h-5" />
         </div>
       </SidebarHeader>
@@ -118,7 +118,7 @@ function Header({ onCreateDialogue, currentPage }: { onCreateDialogue: () => voi
         return (
           <Button 
             onClick={onCreateDialogue}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Dialogue
@@ -126,7 +126,7 @@ function Header({ onCreateDialogue, currentPage }: { onCreateDialogue: () => voi
         )
       case 'products':
         return (
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <Upload className="h-4 w-4 mr-2" />
             Upload Product Feed
           </Button>

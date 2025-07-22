@@ -126,7 +126,7 @@ export default function Products() {
                   <TableCell>
                     <a
                       href="#"
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                      className="text-primary hover:text-primary/80 hover:underline"
                     >
                       {product.redirect}
                     </a>
