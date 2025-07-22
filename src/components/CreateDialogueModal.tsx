@@ -56,6 +56,7 @@ export default function CreateDialogueModal({
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     campaignObjective: "increase-order-value",
+    brandName: "",
     productList: "Allproducts.csv",
     additionalPrompt: "",
   });
@@ -96,6 +97,7 @@ export default function CreateDialogueModal({
               },
               body: JSON.stringify({
                 campaignObjective: formData.campaignObjective,
+                brandName: formData.brandName,
                 productList: formData.productList,
                 additionalPrompt: formData.additionalPrompt,
               }),
@@ -282,6 +284,12 @@ export default function CreateDialogueModal({
     setCampaignName("");
     setIframeCode("");
     setIsCopied(false);
+    setFormData({
+      campaignObjective: "increase-order-value",
+      brandName: "",
+      productList: "Allproducts.csv",
+      additionalPrompt: "",
+    });
   };
 
   const toggleVersionSelection = (versionIndex: number) => {
@@ -356,8 +364,27 @@ export default function CreateDialogueModal({
             <div className="space-y-6 pb-6 pt-6">
               {currentStep === 1 && (
                 <>
-                  {/* Campaign Objective */}
+                  {/* Brand Name */}
                   <div className="space-y-2 !mt-0">
+                    <label className="text-sm font-medium text-foreground">
+                      Brand name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter your brand name"
+                      value={formData.brandName}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          brandName: e.target.value,
+                        }))
+                      }
+                      className="w-full h-9 px-3 py-2 text-sm bg-background border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                    />
+                  </div>
+
+                  {/* Campaign Objective */}
+                  <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">
                       Campaign objective
                     </label>
