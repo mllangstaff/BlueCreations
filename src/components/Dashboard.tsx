@@ -241,28 +241,38 @@ function DialogueCard({ campaign }: { campaign: Campaign }) {
   )
 }
 
-function DashboardContent() {
+function DashboardContent({ campaigns, isLoading, error }: { 
+  campaigns: Campaign[]
+  isLoading: boolean
+  error: string | null
+}) {
   return (
     <div className="flex-1 overflow-auto">
       <div className="px-12 py-6 space-y-6">
         {/* Filter Controls */}
         <FilterTabs />
         
-        {/* Dialogue Cards Grid */}
+        {/* Campaign Cards Grid */}
         <div className="space-y-4">
-          {/* First row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockDialogues.slice(0, 3).map((dialogue) => (
-              <DialogueCard key={dialogue.id} dialogue={dialogue} />
-            ))}
-          </div>
-          
-          {/* Second row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockDialogues.slice(3, 6).map((dialogue) => (
-              <DialogueCard key={dialogue.id} dialogue={dialogue} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-muted-foreground">Loading campaigns...</p>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-red-500">Error: {error}</p>
+            </div>
+          ) : campaigns.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-muted-foreground">No campaigns found. Create your first campaign!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {campaigns.map((campaign) => (
+                <DialogueCard key={campaign.id} campaign={campaign} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -274,6 +284,7 @@ export default function Dashboard() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState('dashboard')
 
   // Fetch campaigns from API
   useEffect(() => {
@@ -308,9 +319,12 @@ export default function Dashboard() {
     fetchCampaigns()
   }, [])
 
-  // Refetch campaigns when a new campaign is created
   const handleCreateDialogue = () => {
     setIsCreateDialogueModalOpen(true)
+  }
+
+  const handleNavigate = (page: string) => {
+    setCurrentPage(page)
   }
 
   const handleModalClose = (open: boolean) => {
@@ -334,48 +348,18 @@ export default function Dashboard() {
     }
   }
 
-  return (
-    <div className="flex h-screen bg-background border border-border">
-      {/* Sidebar */}
-      <Sidebar />
-      
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <Header onCreateDialogue={handleCreateDialogue} />
-        
-        {/* Content Area */}
-        <div className="flex-1 overflow-auto">
-          <div className="px-12 py-6 space-y-6">
-            {/* Filter Controls */}
-            <FilterTabs />
-            
-            {/* Campaign Cards Grid */}
-            <div className="space-y-4">
-              {isLoading ? (
-                <div className="flex items-center justify-center h-64">
-                  <p className="text-muted-foreground">Loading campaigns...</p>
-                </div>
-              ) : error ? (
-                <div className="flex items-center justify-center h-64">
-                  <p className="text-red-500">Error: {error}</p>
-                </div>
-              ) : campaigns.length === 0 ? (
-                <div className="flex items-center justify-center h-64">
-                  <p className="text-muted-foreground">No campaigns found. Create your first campaign!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {campaigns.map((campaign) => (
-                    <DialogueCard key={campaign.id} campaign={campaign} />
-                  ))}
-                </div>
-              )}
-            </div>
+  const renderContent = () => {
+    switch (currentPage) {
+      case 'analytics':
+        return (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-muted-foreground">Analytics page coming soon...</p>
           </div>
         )
+      case 'products':
+        return <Products />
       default:
-        return <DashboardContent />
+        return <DashboardContent campaigns={campaigns} isLoading={isLoading} error={error} />
     }
   }
 
