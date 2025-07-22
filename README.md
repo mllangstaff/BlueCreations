@@ -1,2 +1,0 @@
-# BlueCreations
-Hackathon
