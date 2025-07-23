@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { FileSpreadsheet, Loader2, Copy, Check } from "lucide-react";
 import { CodeBlock, dracula } from "react-code-blocks";
+import { generateEmbedCode } from "@/services/widget-embed-generator";
 
 interface CreateDialogueModalProps {
   open: boolean;
@@ -66,7 +67,6 @@ export default function CreateDialogueModal({
     useState<RecommendationsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [iframeCode, setIframeCode] = useState<string>("");
-  const [isGeneratingIframe, setIsGeneratingIframe] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   // Function to auto-generate campaign name based on objective
@@ -129,11 +129,7 @@ export default function CreateDialogueModal({
           setCampaignName(generatedName);
 
           // Generate iframe code with the auto-generated campaign name
-          if (recommendations) {
-            setIsGeneratingIframe(true);
-            await generateIframeCode(generatedName);
-            setIsGeneratingIframe(false);
-          }
+          generateIframeCode(generatedName);
         }
         setCurrentStep(currentStep + 1);
       } else {
@@ -143,50 +139,19 @@ export default function CreateDialogueModal({
     }
   };
 
-  const generateIframeCode = async (nameToUse?: string) => {
+  const generateIframeCode = (nameToUse?: string) => {
     const currentCampaignName = nameToUse || campaignName;
-
-    try {
-      const selectedVariationIds = selectedVersions.map(
-        (index) => recommendations!.variations[index].id
-      );
-
-      const response = await fetch(
-        "http://localhost:3000/backoffice/generate-iframe",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            campaignName: currentCampaignName,
-            campaignObjective: formData.campaignObjective,
-            selectedVariationIds: selectedVariationIds,
-            additionalPrompt: formData.additionalPrompt,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Generated iframe code:", data);
-      setIframeCode(data.iframeCode || "");
-    } catch (error) {
-      console.error("Error generating iframe code:", error);
-      // Clean single-line iframe code like Jebbit
-      const campaignId = Math.random().toString(36).substr(2, 9);
-      const campaignSlug = currentCampaignName
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-      setIframeCode(
-        `<iframe class="bluecreations-frame" src="https://app.bluecreations.ai/${campaignSlug}?c=${campaignId}&obj=${formData.campaignObjective}&deferred=true" seamless="true" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="width:100%;min-height:600px;" onload="function embedBlueCreations(){function e(){var e='attach'===t?window.addEventListener:window.removeEventListener;e('DOMContentLoaded',i,!1),e('load',i,!1),e('scroll',i,!1),e('resize',i,!1)}var n=document.querySelector('.bluecreations-frame');function i(){(function(){var e=n.getBoundingClientRect(),t=n.clientHeight/2,i=n.clientWidth/2;return e.top>=0&&e.left>=0&&e.top<=(window.innerHeight||document.documentElement.clientHeight)-t&&e.left<=(window.innerWidth||document.documentElement.clientWidth)-i})(n)&&n.contentWindow.postMessage('startBlueCreationsCampaign','*')}window.addEventListener('message',function(){t&&('blueCreationsLoaded'===t.data?e('remove'):'blueCreationsCampaignLoaded'===t.data&&(window.location.href=t.data.options.link))},!1),e('attach')}embedBlueCreations('.bluecreations-frame');"></iframe>`
-      );
-    }
+    
+    // Use the widget embed generator service for consistency
+    const widgetScript = generateEmbedCode(currentCampaignName, {
+      objective: formData.campaignObjective,
+      brandName: formData.brandName || '',
+      theme: 'light',
+      size: 'medium',
+      position: 'bottom-right'
+    });
+    
+    setIframeCode(widgetScript);
   };
 
   const handleCopyCode = async () => {
@@ -525,41 +490,10 @@ export default function CreateDialogueModal({
                       {/* Code Block Section */}
                       <div className="rounded-lg border border-primary overflow-hidden">
                         <div className="bg-[#1c1c1c] p-5">
-                          {isGeneratingIframe ? (
-                            <div className="flex items-center justify-center h-32">
-                              <div className="flex items-center gap-2 text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Generating embed code...
-                              </div>
-                            </div>
-                          ) : iframeCode ? (
-                            <div className="font-mono text-sm text-white/40 leading-5 overflow-x-auto">
-                              <pre className="whitespace-pre overflow-x-auto min-w-full">
-                                <code
-                                  className="block text-left break-all"
-                                  style={{
-                                    wordBreak: "break-all",
-                                    whiteSpace: "pre-wrap",
-                                    overflowWrap: "anywhere",
-                                  }}
-                                  dangerouslySetInnerHTML={{
-                                    __html: iframeCode
-                                      .replace(/</g, "&lt;")
-                                      .replace(/>/g, "&gt;")
-                                      .replace(
-                                        /(&lt;)(\/?)(iframe|script)(\s|&gt;)/g,
-                                        '$1<span class="text-blue-400/60">$2$3</span>$4'
-                                      )
-                                      .replace(
-                                        /(src|width|height|loading|style|async|class|frameborder|seamless|webkitallowfullscreen|mozallowfullscreen|allowfullscreen|onload)/g,
-                                        '<span class="text-blue-400">$1</span>'
-                                      )
-                                      .replace(
-                                        /=("[^"]*")/g,
-                                        '=<span class="text-orange-300">$1</span>'
-                                      ),
-                                  }}
-                                />
+                          {iframeCode ? (
+                            <div className="font-mono text-sm text-white leading-5 overflow-x-auto">
+                              <pre className="whitespace-pre-wrap break-all p-3">
+                                {iframeCode}
                               </pre>
                             </div>
                           ) : (
@@ -574,7 +508,7 @@ export default function CreateDialogueModal({
                         {/* Copy Button */}
                         <Button
                           onClick={handleCopyCode}
-                          disabled={!iframeCode || isGeneratingIframe}
+                          disabled={!iframeCode}
                           className="w-full h-9 bg-primary hover:bg-primary/90 text-white rounded-none rounded-b-lg shadow-sm"
                         >
                           <Copy className="h-4 w-4 mr-2" />
@@ -624,18 +558,14 @@ export default function CreateDialogueModal({
                           disabled={
                             currentStep >= STEPS.length ||
                             isLoading ||
-                            (currentStep === 2 && isGeneratingIframe) ||
                             (currentStep === 2 && selectedVersions.length === 0)
                           }
                           className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:bg-gray-400"
                         >
-                          {isLoading ||
-                          (currentStep === 2 && isGeneratingIframe) ? (
+                          {isLoading ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              {currentStep === 2
-                                ? "Generating..."
-                                : "Loading..."}
+                              Loading...
                             </>
                           ) : (
                             "Next"
