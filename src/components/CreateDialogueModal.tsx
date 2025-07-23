@@ -53,28 +53,30 @@ const STEPS = [
 
 // Function to strip quotes and markup from text
 const stripQuotesAndMarkup = (text: string) => {
-  if (!text) return '';
-  
-  return text
-    // Remove quotes (single and double)
-    .replace(/^["']|["']$/g, '')
-    .replace(/["']/g, '')
-    // Remove markdown bold (**text** or __text__)
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/__(.*?)__/g, '$1')
-    // Remove markdown italic (*text* or _text_)
-    .replace(/\*(.*?)\*/g, '$1')
-    .replace(/_(.*?)_/g, '$1')
-    // Remove markdown links [text](url)
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    // Remove HTML tags
-    .replace(/<[^>]*>/g, '')
-    // Remove bullet points (-, *, •, ◦, ▪, ▫)
-    .replace(/^[\s]*[-*•◦▪▫]\s*/gm, '')
-    // Remove numbered lists (1., 2., etc.)
-    .replace(/^[\s]*\d+\.\s*/gm, '')
-    // Remove extra whitespace
-    .trim();
+  if (!text) return "";
+
+  return (
+    text
+      // Remove quotes (single and double)
+      .replace(/^["']|["']$/g, "")
+      .replace(/["']/g, "")
+      // Remove markdown bold (**text** or __text__)
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/__(.*?)__/g, "$1")
+      // Remove markdown italic (*text* or _text_)
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/_(.*?)_/g, "$1")
+      // Remove markdown links [text](url)
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      // Remove HTML tags
+      .replace(/<[^>]*>/g, "")
+      // Remove bullet points (-, *, •, ◦, ▪, ▫)
+      .replace(/^[\s]*[-*•◦▪▫]\s*/gm, "")
+      // Remove numbered lists (1., 2., etc.)
+      .replace(/^[\s]*\d+\.\s*/gm, "")
+      // Remove extra whitespace
+      .trim()
+  );
 };
 
 // Counter that can be incremented as needed
@@ -83,7 +85,7 @@ let campaignCounter = 0;
 // Function to clean CSS by removing postfixes like -1, -2, -3 and direct digit suffixes like 1, 2, 3
 const cleanCSS = (css: string) => {
   // Remove digits at the end of CSS class and ID selectors
-  return css.replace(/([.#][a-zA-Z_-]+)\d+/g, '$1').replace(/-\d+/g, '');
+  return css.replace(/([.#][a-zA-Z_-]+)\d+/g, "$1").replace(/-\d+/g, "");
 };
 
 export default function CreateDialogueModal({
@@ -177,16 +179,16 @@ export default function CreateDialogueModal({
 
   const generateIframeCode = (nameToUse?: string) => {
     const currentCampaignName = nameToUse || campaignName;
-    
+
     // Use the widget embed generator service for consistency
     const widgetScript = generateEmbedCode(currentCampaignName, {
       objective: formData.campaignObjective,
-      brandName: formData.brandName || '',
-      theme: 'light',
-      size: 'medium',
-      position: 'bottom-right'
+      brandName: formData.brandName || "",
+      theme: "light",
+      size: "medium",
+      position: "bottom-right",
     });
-    
+
     setIframeCode(widgetScript);
   };
 
@@ -230,6 +232,7 @@ export default function CreateDialogueModal({
               html: selectedVariation.html,
               css: selectedVariation.css,
               text: selectedVariation.text,
+              header: selectedVariation.header,
             },
             targetingCriteria: {}, // You can populate this with targeting data
             category: "all", // Default as specified in API
@@ -316,7 +319,9 @@ export default function CreateDialogueModal({
             {STEPS.map((step, index) => (
               <div
                 key={step.number}
-                className={`flex items-center gap-2 relative z-10 ${index < STEPS.length - 1 ? 'mb-5' : ''}`}
+                className={`flex items-center gap-2 relative z-10 ${
+                  index < STEPS.length - 1 ? "mb-5" : ""
+                }`}
               >
                 <div
                   className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm font-medium ${
