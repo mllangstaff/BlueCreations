@@ -5,6 +5,13 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -33,6 +40,10 @@ import {
   Upload,
   Search,
   ShoppingCart,
+  ExternalLink,
+  Wrench,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 // Campaign interface
@@ -266,6 +277,26 @@ function getRelativeTime(dateString?: string) {
 }
 
 function DialogueCard({ campaign }: { campaign: Campaign }) {
+  const handleVisitPage = () => {
+    const url = `http://localhost:3001?campaignName=${encodeURIComponent(campaign.name)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleEdit = () => {
+    // TODO: Implement edit functionality
+    console.log("Edit campaign:", campaign.id);
+  };
+
+  const handleRename = () => {
+    // TODO: Implement rename functionality
+    console.log("Rename campaign:", campaign.id);
+  };
+
+  const handleDelete = () => {
+    // TODO: Implement delete functionality
+    console.log("Delete campaign:", campaign.id);
+  };
+
   return (
     <Card className="overflow-hidden">
       {/* Placeholder image area */}
@@ -291,9 +322,33 @@ function DialogueCard({ campaign }: { campaign: Campaign }) {
               {getRelativeTime(campaign.updatedAt || campaign.createdAt)}
             </p>
           </div>
-          <Button variant="ghost" size="sm" className="p-1 h-6 w-6 shrink-0">
-            <MoreVertical className="h-4 w-4 text-foreground" />
-          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="p-1 h-6 w-6 shrink-0">
+                <MoreVertical className="h-4 w-4 text-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36">
+              <DropdownMenuItem onClick={handleVisitPage} className="gap-2">
+                <ExternalLink className="h-4 w-4" />
+                Visit page
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleEdit} className="gap-2">
+                <Wrench className="h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleRename} className="gap-2">
+                <Pencil className="h-4 w-4" />
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleDelete} className="gap-2 text-destructive focus:text-destructive">
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardContent>
     </Card>
