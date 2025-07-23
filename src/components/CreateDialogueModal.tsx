@@ -50,6 +50,15 @@ const STEPS = [
   { number: 3, title: "Code snippet" },
 ];
 
+// Counter that can be incremented as needed
+let campaignCounter = 0;
+
+// Function to clean CSS by removing postfixes like -1, -2, -3 and direct digit suffixes like 1, 2, 3
+const cleanCSS = (css: string) => {
+  // Remove digits at the end of CSS class and ID selectors
+  return css.replace(/([.#][a-zA-Z_-]+)\d+/g, '$1').replace(/-\d+/g, '');
+};
+
 export default function CreateDialogueModal({
   open,
   onOpenChange,
@@ -186,12 +195,13 @@ export default function CreateDialogueModal({
               : campaignName;
 
           const saveData = {
+            campaignId: `campaign-${campaignCounter++}`,
             campaignName: uniqueCampaignName,
             campaignObjective: formData.campaignObjective,
             variation: {
               widgetType: selectedVariation.widgetType,
               html: selectedVariation.html,
-              css: selectedVariation.css,
+              css: cleanCSS(selectedVariation.css),
               text: selectedVariation.text,
             },
             targetingCriteria: {}, // You can populate this with targeting data
