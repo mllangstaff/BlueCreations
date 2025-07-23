@@ -228,7 +228,7 @@ export default function CreateDialogueModal({
             variation: {
               widgetType: selectedVariation.widgetType,
               html: selectedVariation.html,
-              css: cleanCSS(selectedVariation.css),
+              css: selectedVariation.css,
               text: selectedVariation.text,
             },
             targetingCriteria: {}, // You can populate this with targeting data
