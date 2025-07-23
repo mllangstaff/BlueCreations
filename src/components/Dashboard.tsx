@@ -269,7 +269,12 @@ function DialogueCard({ campaign }: { campaign: Campaign }) {
   return (
     <Card className="overflow-hidden">
       {/* Placeholder image area */}
-      <div className="aspect-[3/2] bg-muted" />
+      <div className="aspect-[3/2] bg-muted" style={{ 
+          backgroundImage: `url(src/assets/thumbnail.png)`,
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'contain',
+          backgroundPosition: 'center'
+      }}/>
 
       <CardContent className="p-5">
         <div className="flex items-center justify-between gap-4">
