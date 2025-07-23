@@ -32,6 +32,7 @@ interface Variation {
   html: string;
   css: string;
   text: string;
+  header: string;
 }
 
 interface RecommendationsResponse {
@@ -49,6 +50,32 @@ const STEPS = [
   { number: 2, title: "Versions" },
   { number: 3, title: "Code snippet" },
 ];
+
+// Function to strip quotes and markup from text
+const stripQuotesAndMarkup = (text: string) => {
+  if (!text) return '';
+  
+  return text
+    // Remove quotes (single and double)
+    .replace(/^["']|["']$/g, '')
+    .replace(/["']/g, '')
+    // Remove markdown bold (**text** or __text__)
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    // Remove markdown italic (*text* or _text_)
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/_(.*?)_/g, '$1')
+    // Remove markdown links [text](url)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Remove HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Remove bullet points (-, *, •, ◦, ▪, ▫)
+    .replace(/^[\s]*[-*•◦▪▫]\s*/gm, '')
+    // Remove numbered lists (1., 2., etc.)
+    .replace(/^[\s]*\d+\.\s*/gm, '')
+    // Remove extra whitespace
+    .trim();
+};
 
 // Counter that can be incremented as needed
 let campaignCounter = 0;
@@ -447,13 +474,12 @@ export default function CreateDialogueModal({
 
                           {/* Header */}
                           <h3 className="text-lg font-semibold text-foreground mb-3">
-                            Hey User, based on your history I've got some
-                            products I think you'll love!
+                            {stripQuotesAndMarkup(variation.header)}
                           </h3>
 
                           {/* Description with Persuasive Text */}
                           <p className="text-sm text-muted-foreground mb-6">
-                            {variation.text}
+                            {stripQuotesAndMarkup(variation.text)}
                           </p>
 
                           {/* Products from API */}
